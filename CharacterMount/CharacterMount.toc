@@ -1,0 +1,9 @@
+## Interface: 120000
+## Title: Character Mount
+## Notes: A World of Warcraft addon for character-specific mount management
+## Version: 0.0.1
+## Author: Lucky Phil
+## SavedVariables: CharacterMountDB
+
+MountHelpers.lua
+CharacterMount.lua
