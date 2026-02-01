@@ -52,6 +52,9 @@ function CharacterMount_AddMount(mountID)
     table.insert(CharacterMountDB[charKey].mounts, mountID)
     print("|cff00ff00Character Mount:|r Added " .. name .. " to your list")
     
+    -- Update macro
+    CharacterMount_UpdateMacro()
+    
     return true
 end
 
@@ -64,6 +67,10 @@ function CharacterMount_RemoveMount(mountID)
             table.remove(CharacterMountDB[charKey].mounts, i)
             local name = C_MountJournal.GetMountInfoByID(mountID)
             print("|cff00ff00Character Mount:|r Removed " .. (name or "mount") .. " from your list")
+            
+            -- Update macro
+            CharacterMount_UpdateMacro()
+            
             return true
         end
     end
@@ -76,6 +83,75 @@ end
 function CharacterMount_GetMountList()
     local charKey = GetCharacterKey()
     return CharacterMountDB[charKey].mounts
+end
+
+---
+-- Mount a random mount from the character's list (used by macro)
+---
+function CharacterMount_MountRandom()
+    local mounts = CharacterMount_GetMountList()
+    
+    if #mounts == 0 then
+        print("|cffff0000Character Mount:|r No mounts in your list. Use /cmount to add mounts.")
+        return
+    end
+    
+    -- Pick a random mount
+    local randomIndex = math.random(1, #mounts)
+    local mountID = mounts[randomIndex]
+    
+    -- Summon the mount
+    local success, message = CharacterMount_SummonMount(mountID, nil, false)
+    if not success and message then
+        print("|cffff0000Character Mount:|r " .. message)
+    end
+end
+
+---
+-- Create or update the Character Mount macro
+---
+function CharacterMount_CreateMacro()
+    local macroName = "CharMount"
+    local macroIcon = "136103"  -- Same icon as ZoneMount
+    local macroBody = "/run CharacterMount_MountRandom()"
+    
+    -- Check if macro already exists
+    local existingMacro = GetMacroInfo(macroName)
+    
+    if existingMacro then
+        -- Macro exists, just pick it up for the user
+        print("|cff00ff00Character Mount:|r Macro '" .. macroName .. "' already exists. Drag it to your action bar.")
+        PickupMacro(macroName)
+        return
+    end
+    
+    -- Try to create the macro
+    local macroID = CreateMacro(macroName, macroIcon, macroBody, nil)
+    
+    if macroID then
+        print("|cff00ff00Character Mount:|r Created macro '" .. macroName .. "'. Drag it to your action bar.")
+        PickupMacro(macroName)
+    else
+        print("|cffff0000Character Mount:|r Cannot create macro - macro limit reached. Please delete some macros.")
+    end
+end
+
+---
+-- Update the Character Mount macro (called when mounts are added/removed)
+---
+function CharacterMount_UpdateMacro()
+    if InCombatLockdown() then
+        return
+    end
+    
+    local macroName = "CharMount"
+    local macroIndex = GetMacroIndexByName(macroName)
+    
+    if macroIndex > 0 then
+        local macroIcon = "136103"
+        local macroBody = "/run CharacterMount_MountRandom()"
+        EditMacro(macroIndex, macroName, macroIcon, macroBody)
+    end
 end
 
 -- Event handler frame
@@ -97,6 +173,9 @@ local function OnEvent(self, event, ...)
         -- Create UI elements after player login
         CharacterMount_CreateMountListUI()
         CharacterMount_HookMountJournalMenu()
+        
+        -- Create/update the macro
+        CharacterMount_CreateMacro()
     end
 end
 
