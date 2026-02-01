@@ -1,0 +1,8 @@
+package-as: CharacterMount
+
+move-folders:
+  Character Mount/CharacterMount: CharacterMount
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
