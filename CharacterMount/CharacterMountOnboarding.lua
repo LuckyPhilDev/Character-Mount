@@ -81,9 +81,9 @@ local function BuildCandidates()
     for _, source in ipairs(SOURCE_PRIORITY) do
         for _, mountID in ipairs(pools[source]) do
             if not seen[mountID] then
-                local name, _, icon, _, _, _, _, _, _, _, isCollected =
+                local name, _, icon, _, _, _, _, _, _, shouldHideOnChar, isCollected =
                     C_MountJournal.GetMountInfoByID(mountID)
-                if isCollected and name then
+                if isCollected and name and not shouldHideOnChar then
                     seen[mountID] = true
                     local preChecked = (source ~= "rare")
                     entries[#entries + 1] = {
@@ -278,18 +278,33 @@ function CharacterMount.ShowOnboarding()
     -- Title
     frame.TitleText:SetText("Set Up Your Mounts")
 
-    -- Subtitle with character context
-    local _, englishRace = UnitRace("player")
-    local localClass     = UnitClass("player")
-    local subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    subtitle:SetPoint("TOP", frame.TitleText, "BOTTOM", 0, -2)
-    subtitle:SetText(COLOUR_DIM .. englishRace .. " " .. localClass .. COLOUR_RESET)
+    -- Subtitle with character name, race, class (class-coloured)
+    local localRace              = UnitRace("player")
+    local localClass, classFile  = UnitClass("player")
+    local playerName = UnitName("player")
+    local classColour = RAID_CLASS_COLORS[classFile]
+    local colourHex = classColour and classColour:GenerateHexColor() or "ffffffff"
+    local subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    subtitle:SetPoint("TOPLEFT", frame.InsetBorderTop or frame.Inset or frame, "TOPLEFT", 8, -8)
+    subtitle:SetText("|c" .. colourHex .. playerName .. " - " .. localRace .. " " .. localClass .. COLOUR_RESET)
+
+    -- Description blurb
+    local blurb = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    blurb:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -6)
+    blurb:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
+    blurb:SetJustifyH("LEFT")
+    blurb:SetWordWrap(true)
+    blurb:SetText(COLOUR_DIM
+        .. "Choose mounts below to get your character list started. "
+        .. "You can add or remove mounts later from the journal or "
+        .. "by opening the /cmount menu."
+        .. COLOUR_RESET)
 
     -- -----------------------------------------------------------------------
     -- Scroll frame
     -- -----------------------------------------------------------------------
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -52)
+    scrollFrame:SetPoint("TOPLEFT", blurb, "BOTTOMLEFT", -4, -6)
     scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
 
     local content = CreateFrame("Frame", nil, scrollFrame)
