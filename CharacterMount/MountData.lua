@@ -304,3 +304,213 @@ end
 function MD.GetClassMountIDs(classFile)
     return MD.CLASS_MOUNTS[classFile] or {}
 end
+
+-- ---------------------------------------------------------------------------
+-- Mount group names — maps mount IDs to a display group for onboarding UI.
+-- Mounts in the same group get a shared sub-header with a select-all toggle.
+-- ---------------------------------------------------------------------------
+MD.MOUNT_GROUPS = {}
+local function RegisterGroup(groupName, ids)
+    for _, id in ipairs(ids) do
+        MD.MOUNT_GROUPS[id] = groupName
+    end
+end
+
+-- Racial ground families
+RegisterGroup("Horses",          {6, 18, 11, 9, 53, 91, 92, 93, 321, 376, 579})
+RegisterGroup("Skeletal Horses", {66, 67, 65, 68, 100, 314, 168})
+RegisterGroup("Rams",            {25, 21, 24, 64, 94, 95, 96})
+RegisterGroup("Sabers",          {31, 337, 26, 34, 85, 87, 107, 393})
+RegisterGroup("Mechanostriders", {40, 57, 39, 58, 88, 89, 90})
+RegisterGroup("Elekks",          {147, 163, 164, 166, 165, 167})
+RegisterGroup("Wolves",          {20, 19, 14, 310, 104, 105, 106, 522})
+RegisterGroup("Kodos",           {72, 71, 309, 103, 102, 101, 350, 351})
+RegisterGroup("Raptors",         {27, 36, 38, 97, 98, 99, 78})
+RegisterGroup("Hawkstriders",    {158, 159, 157, 152, 302, 161, 320, 213})
+RegisterGroup("Trikes",          {388, 389})
+RegisterGroup("Dragon Turtles",  {452, 453, 492, 493, 494, 495, 496, 497, 498, 499, 500, 501})
+
+-- Racial/faction flying families
+RegisterGroup("Gryphons",        {129, 130, 131, 132, 137, 138, 139})
+RegisterGroup("Wind Riders",     {133, 134, 135, 136, 140, 141})
+RegisterGroup("Hippogryphs",     {203, 329, 413, 568})
+RegisterGroup("Dragonhawks",     {291, 292, 330, 548})
+RegisterGroup("Cloud Serpents",   {523, 524, 525})
+RegisterGroup("Bats",            {544, 1049, 1210})
+
+-- Class mount families
+RegisterGroup("Paladin Chargers",   {41, 84, 150, 149, 350, 351, 367, 368, 1047, 1046, 1225, 1568, 885, 892, 893, 894, 2726, 338, 339})
+RegisterGroup("Warlock Steeds",     {17, 83, 898, 930, 931, 2730})
+RegisterGroup("Deathchargers",      {221, 866, 2720})
+RegisterGroup("Demon Hunter Mounts", {868, 2721})
+RegisterGroup("Wolfhawks",          {865, 870, 872, 2723})
+RegisterGroup("Monk Companions",    {864, 2725})
+RegisterGroup("Rogue Omens",        {884, 889, 890, 891, 2728})
+
+-- Allied race mounts
+RegisterGroup("Direhorns",       {1038, 1225})
+RegisterGroup("Hyenas",          {1286})
+
+--- Returns the group name for a mount, or nil if ungrouped.
+function MD.GetMountGroup(mountID)
+    return MD.MOUNT_GROUPS[mountID]
+end
+
+-- ---------------------------------------------------------------------------
+-- Suggested mounts — opinionated, thematically fitting picks.
+-- Race suggestions: faction flyers, race-themed mounts only.
+-- Class suggestions: Felscorned mounts, thematic class picks only.
+-- IDs need in-game verification: /run local n=C_MountJournal.GetMountInfoByID(ID) print(n)
+-- ---------------------------------------------------------------------------
+MD.SUGGESTED_MOUNTS = {
+    race = {
+        -- Alliance — Gryphons
+        ["Human"]             = { 132, 137, 138, 139, 129, 130, 131 },
+        ["Dwarf"]             = { 132, 137, 138, 139, 129, 130, 131 },
+        ["Gnome"]             = { 205, 132, 137, 130, 131, 275, 574 },
+        ["Draenei"]           = { 132, 137, 139, 130, 131 },
+        ["Worgen"]            = { 132, 137, 130, 131 },
+        -- Night Elf — Hippogryphs
+        ["NightElf"]          = { 203, 329, 413, 568, 393 },
+        -- Pandaren — Cloud Serpents
+        ["Pandaren"]          = { 523, 524, 525, 566 },
+        -- Allied — Alliance
+        ["VoidElf"]           = { 139, 132, 130 },
+        ["LightforgedDraenei"]= { 132, 139, 130 },
+        ["DarkIronDwarf"]     = { 132, 137, 130, 275, 574 },
+        ["KulTiran"]          = { 132, 130, 1013 },
+        ["Mechagnome"]        = { 205, 132, 130, 275, 574 },
+
+        -- Horde — Wind Riders
+        ["Orc"]               = { 136, 140, 141, 133, 134, 135, 341, 522 },
+        ["Tauren"]            = { 136, 140, 141, 133, 134, 135 },
+        ["Troll"]             = { 136, 140, 133, 134, 78 },
+        ["Goblin"]            = { 136, 205, 133, 134, 275, 574 },
+        -- Undead — Bats
+        ["Undead"]            = { 544, 1049, 1210, 168 },
+        -- Blood Elf — Dragonhawks
+        ["BloodElf"]          = { 292, 291, 330, 548 },
+        -- Allied — Horde
+        ["Nightborne"]        = { 136, 141, 133 },
+        ["HighmountainTauren"]= { 136, 140, 133 },
+        ["MagharOrc"]         = { 136, 140, 141, 133, 341, 522 },
+        ["ZandalariTroll"]    = { 1043, 136, 133, 78 },
+        ["Vulpera"]           = { 136, 141, 133 },
+
+        -- Neutral
+        ["Dracthyr"]          = {},
+        ["Earthen"]           = { 132, 136, 130, 133 },
+    },
+
+    class = {
+        ["PALADIN"]     = { 2726, 338, 339 },
+        ["WARLOCK"]     = { 2730, 168 },
+        ["DEATHKNIGHT"] = { 2720, 168, 219, 238 },
+        ["DEMONHUNTER"] = { 2721 },
+        ["DRUID"]       = { 2722, 393, 845 },
+        ["HUNTER"]      = { 2723, 522, 78, 280 },
+        ["MAGE"]        = { 2724, 566 },
+        ["MONK"]        = { 2725, 566, 523, 524, 525 },
+        ["PRIEST"]      = { 2727 },
+        ["ROGUE"]       = { 2728, 168 },
+        ["SHAMAN"]      = { 2729, 280 },
+        ["WARRIOR"]     = { 2731, 341, 338 },
+        ["EVOKER"]      = {},
+    },
+}
+
+-- ---------------------------------------------------------------------------
+-- Rare mounts — notable collectibles any character might want.
+-- Universal list, not keyed by class or race. Shown unchecked by default.
+-- ---------------------------------------------------------------------------
+MD.RARE_MOUNTS = {
+    -- Classic / Wrath iconic
+    363,  -- Invincible
+    219,  -- Headless Horseman's Mount
+    248,  -- Bronze Drake
+    250,  -- Twilight Drake
+    405,  -- Spectral Steed
+    237,  -- White Polar Bear
+
+    -- Burning Crusade / Classic prestige
+    183,  -- Ashes of Al'ar
+    168,  -- Fiery Warhorse's Reins
+    213,  -- Swift White Hawkstrider
+
+    -- Wrath of the Lich King
+    304,  -- Mimiron's Head
+    264,  -- Blue Proto-Drake
+    265,  -- Time-Lost Proto-Drake
+    306,  -- Ironbound Proto-Drake
+    307,  -- Rusted Proto-Drake
+
+    -- Cataclysm
+    393,  -- Phosphorescent Stone Drake
+    395,  -- Drake of the North Wind
+    396,  -- Drake of the South Wind
+    397,  -- Vitreous Stone Drake
+    392,  -- Drake of the East Wind
+    394,  -- Drake of the West Wind
+    407,  -- Vial of the Sands
+
+    -- Mists of Pandaria
+    473,  -- Heavenly Onyx Cloud Serpent
+    478,  -- Astral Cloud Serpent
+    542,  -- Thundering Cobalt Cloud Serpent
+    561,  -- Thundering Onyx Cloud Serpent
+    463,  -- Amber Scorpion
+
+    -- Warlords of Draenor
+    634,  -- Solar Spirehawk
+    622,  -- Armored Razorback
+    611,  -- Tundra Icehoof
+
+    -- Legion
+    945,  -- Vicious War Fox
+    764,  -- Grove Warden
+    791,  -- Fiendish Hellfire Core
+    804,  -- Ratstallion
+
+    -- Battle for Azeroth
+    1217, -- G.M.O.D.
+    1039, -- Mighty Caravan Brutosaur
+    1053, -- Underrot Crawg
+    1219, -- Glacial Tidestorm
+    1218, -- Dazar'alor Windreaver
+
+    -- Shadowlands
+    1304, -- Mawsworn Soulhunter
+    1500, -- Sanctum Gloomcharger
+    1481, -- Cartel Master's Gearglider
+    1417, -- Hand of Hrestimorak
+
+    -- Dragonflight
+    1589, -- Renewed Proto-Drake
+    1563, -- Highland Drake
+    1591, -- Cliffside Wylderdrake
+    1590, -- Windborne Velocidrake
+
+    -- Utility / valuable mounts
+    449,  -- Azure Water Strider
+    522,  -- Sky Golem
+    275,  -- Mekgineer's Chopper
+}
+
+-- ---------------------------------------------------------------------------
+-- Accessor functions for suggested/rare
+-- ---------------------------------------------------------------------------
+
+--- Returns suggested race mount IDs for the given race.
+function MD.GetSuggestedRaceMountIDs(englishRace)
+    return MD.SUGGESTED_MOUNTS.race[englishRace] or {}
+end
+
+--- Returns suggested class mount IDs for the given class.
+function MD.GetSuggestedClassMountIDs(classFile)
+    return MD.SUGGESTED_MOUNTS.class[classFile] or {}
+end
+
+--- Returns the flat array of rare mount IDs.
+function MD.GetRareMountIDs()
+    return MD.RARE_MOUNTS
+end

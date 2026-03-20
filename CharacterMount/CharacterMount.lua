@@ -81,7 +81,8 @@ local function GetClassMounts()
 end
 
 --- Returns the effective mount list for the current character.
--- effective = (racial_collected ∪ class_collected ∪ additions) − exclusions
+-- If onboarding is complete: additions − exclusions only (no auto racial/class).
+-- If onboarding not done (legacy): (racial ∪ class ∪ additions) − exclusions.
 function CharacterMount.GetEffectiveMountList()
     local seen   = {}
     local result = {}
@@ -93,8 +94,11 @@ function CharacterMount.GetEffectiveMountList()
         end
     end
 
-    for _, entry in ipairs(GetRacialMounts()) do addIfNew(entry) end
-    for _, entry in ipairs(GetClassMounts())  do addIfNew(entry) end
+    -- Only auto-include racial/class if onboarding hasn't been completed
+    if not db.onboardingComplete then
+        for _, entry in ipairs(GetRacialMounts()) do addIfNew(entry) end
+        for _, entry in ipairs(GetClassMounts())  do addIfNew(entry) end
+    end
 
     for mountID in pairs(db.additions) do
         if not seen[mountID] and not db.exclusions[mountID] then
@@ -393,6 +397,8 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         db.additions  = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         print(PREFIX .. " All exclusions and manual additions cleared.")
+    elseif lower == "reset onboarding" then
+        CharacterMount.ResetOnboarding()
     elseif lower:sub(1, 4) == "add " then
         local arg = msg:sub(5):match("^%s*(.-)%s*$")
         local mountID = tonumber(arg)
@@ -437,8 +443,9 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         print("  /cmount remove <name|id>")
         print("  /cmount macro        — create action bar macro")
         print("  /cmount mount        — mount now")
-        print("  /cmount reset        — clear all exclusions")
-        print("  /cmount reset all    — clear exclusions and manual additions")
+        print("  /cmount reset            — clear all exclusions")
+        print("  /cmount reset all        — clear exclusions and manual additions")
+        print("  /cmount reset onboarding — reset and re-trigger onboarding")
     end
 end
 
@@ -466,6 +473,10 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         if C_AddOns.IsAddOnLoaded("Blizzard_Collections") then
             CharacterMount.HookMountJournalButton()
             eventFrame:UnregisterEvent("ADDON_LOADED")
+        end
+        -- Trigger onboarding for new characters
+        if not db.onboardingComplete then
+            CharacterMount.ShowOnboarding()
         end
     end
 end)

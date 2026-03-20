@@ -9,3 +9,4 @@ MountHelpers.lua
 MountData.lua
 CharacterMount.lua
 CharacterMountUI.lua
+CharacterMountOnboarding.lua
