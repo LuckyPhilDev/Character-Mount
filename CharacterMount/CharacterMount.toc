@@ -1,9 +1,11 @@
 ## Interface: 120000
 ## Title: Character Mount
-## Notes: A World of Warcraft addon for character-specific mount management
-## Version: 0.0.1
+## Notes: Summons a random racial or class mount. Per-character list, auto-populated.
+## Version: 1.0.0
 ## Author: Lucky Phil
 ## SavedVariables: CharacterMountDB
 
 MountHelpers.lua
+MountData.lua
 CharacterMount.lua
+CharacterMountUI.lua

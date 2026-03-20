@@ -1,432 +1,471 @@
--- Character Mount Addon
--- A World of Warcraft addon for character-specific mount management
+-- Character Mount: Core logic, macro management, and event handling.
 
-local addonName, addon = ...
+CharacterMount = CharacterMount or {}
 
--- Initialize saved variables
-CharacterMountDB = CharacterMountDB or {}
+local ADDON_NAME = "CharacterMount"
+local PREFIX     = "|cff00cc00CharMount:|r"
 
--- Get character key for saved variables
+-- Module-level references set during ADDON_LOADED
+local db      -- CharacterMountDB[charKey] for the current character
+local charKey -- "CharName-RealmName"
+
+-- ---------------------------------------------------------------------------
+-- Saved variable helpers
+-- ---------------------------------------------------------------------------
+
 local function GetCharacterKey()
-    local playerName = UnitName("player")
-    local realmName = GetRealmName()
-    return playerName .. "-" .. realmName
+    return UnitName("player") .. "-" .. GetRealmName()
 end
 
--- Initialize character mount list
-local function InitializeCharacterData()
-    local charKey = GetCharacterKey()
-    
+local function InitDB()
+    charKey = GetCharacterKey()
+    CharacterMountDB = CharacterMountDB or {}
+
     if not CharacterMountDB[charKey] then
         CharacterMountDB[charKey] = {
-            mounts = {}  -- Array of mount IDs
+            additions  = {},
+            exclusions = {},
         }
     end
+
+    local charData = CharacterMountDB[charKey]
+
+    -- Migrate legacy 'mounts' array (v0.x) → additions sparse set
+    if charData.mounts then
+        for _, id in ipairs(charData.mounts) do
+            charData.additions[id] = true
+        end
+        charData.mounts = nil
+    end
+
+    charData.additions  = charData.additions  or {}
+    charData.exclusions = charData.exclusions or {}
+
+    db = charData
+    CharacterMount.db = db
 end
 
--- Add mount to current character's list
-function CharacterMount_AddMount(mountID)
-    if not mountID then
-        print("|cffff0000Character Mount:|r No mount ID provided")
-        return false
-    end
-    
-    local charKey = GetCharacterKey()
-    
-    -- Check if mount is already in list
-    for _, id in ipairs(CharacterMountDB[charKey].mounts) do
-        if id == mountID then
-            print("|cffff0000Character Mount:|r Mount already in list")
-            return false
+-- ---------------------------------------------------------------------------
+-- Mount list construction
+-- ---------------------------------------------------------------------------
+
+local function GetRacialMounts()
+    local localRace, englishRace = UnitRace("player")
+    print(PREFIX .. " [DEBUG] UnitRace: localized='" .. tostring(localRace) .. "' english='" .. tostring(englishRace) .. "'")
+    local ids = CharacterMount.MountData.GetRacialMountIDs(englishRace)
+    print(PREFIX .. " [DEBUG] Racial mount IDs found for '" .. tostring(englishRace) .. "': " .. #ids)
+    local result = {}
+    for _, mountID in ipairs(ids) do
+        local name, _, icon, _, _, _, _, _, _, _, isCollected =
+            C_MountJournal.GetMountInfoByID(mountID)
+        print(PREFIX .. " [DEBUG] Mount ID " .. mountID .. ": name='" .. tostring(name) .. "' isCollected=" .. tostring(isCollected))
+        if isCollected and name then
+            result[#result + 1] = { id = mountID, name = name, icon = icon, source = "racial" }
         end
     end
-    
-    -- Get mount info
+    return result
+end
+
+local function GetClassMounts()
+    local _, classFile = UnitClass("player")
+    local ids = CharacterMount.MountData.GetClassMountIDs(classFile)
+    local result = {}
+    for _, mountID in ipairs(ids) do
+        local name, _, icon, _, _, _, _, _, _, _, isCollected =
+            C_MountJournal.GetMountInfoByID(mountID)
+        if isCollected and name then
+            result[#result + 1] = { id = mountID, name = name, icon = icon, source = "class" }
+        end
+    end
+    return result
+end
+
+--- Returns the effective mount list for the current character.
+-- effective = (racial_collected ∪ class_collected ∪ additions) − exclusions
+function CharacterMount.GetEffectiveMountList()
+    local seen   = {}
+    local result = {}
+
+    local function addIfNew(entry)
+        if not seen[entry.id] and not db.exclusions[entry.id] then
+            seen[entry.id] = true
+            result[#result + 1] = entry
+        end
+    end
+
+    for _, entry in ipairs(GetRacialMounts()) do addIfNew(entry) end
+    for _, entry in ipairs(GetClassMounts())  do addIfNew(entry) end
+
+    for mountID in pairs(db.additions) do
+        if not seen[mountID] and not db.exclusions[mountID] then
+            local name, _, icon, _, _, _, _, _, _, _, isCollected =
+                C_MountJournal.GetMountInfoByID(mountID)
+            if isCollected and name then
+                seen[mountID] = true
+                result[#result + 1] = { id = mountID, name = name, icon = icon, source = "manual" }
+            end
+        end
+    end
+
+    return result
+end
+
+-- ---------------------------------------------------------------------------
+-- Public add / remove / unexclude
+-- ---------------------------------------------------------------------------
+
+function CharacterMount.AddMount(mountID)
     local name = C_MountJournal.GetMountInfoByID(mountID)
     if not name then
-        print("|cffff0000Character Mount:|r Invalid mount ID")
+        print(PREFIX .. " Invalid mount ID: " .. tostring(mountID))
         return false
     end
-    
-    -- Add to list
-    table.insert(CharacterMountDB[charKey].mounts, mountID)
-    print("|cff00ff00Character Mount:|r Added " .. name .. " to your list")
-    
-    -- Update macro
-    CharacterMount_UpdateMacro()
-    
+    db.exclusions[mountID] = nil
+    db.additions[mountID]  = true
+    print(PREFIX .. " Added " .. name .. " to your list.")
+    if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     return true
 end
 
--- Remove mount from current character's list
-function CharacterMount_RemoveMount(mountID)
-    local charKey = GetCharacterKey()
-    
-    for i, id in ipairs(CharacterMountDB[charKey].mounts) do
-        if id == mountID then
-            table.remove(CharacterMountDB[charKey].mounts, i)
-            local name = C_MountJournal.GetMountInfoByID(mountID)
-            print("|cff00ff00Character Mount:|r Removed " .. (name or "mount") .. " from your list")
-            
-            -- Update macro
-            CharacterMount_UpdateMacro()
-            
-            return true
+function CharacterMount.RemoveMount(mountID)
+    local name = C_MountJournal.GetMountInfoByID(mountID) or "mount"
+    db.additions[mountID]  = nil
+    db.exclusions[mountID] = true
+    print(PREFIX .. " Removed " .. name .. " from your list.")
+    if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+end
+
+function CharacterMount.UnexcludeMount(mountID)
+    db.exclusions[mountID] = nil
+    if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+end
+
+-- ---------------------------------------------------------------------------
+-- MountRandom — called by the macro
+-- ---------------------------------------------------------------------------
+
+function CharacterMount.MountRandom()
+    print(PREFIX .. " MountRandom called.")
+
+    if IsMounted() then
+        if IsFlying() then
+            print(PREFIX .. " Flying — cannot dismount.")
+        else
+            print(PREFIX .. " Dismounting.")
+            Dismount()
         end
-    end
-    
-    print("|cffff0000Character Mount:|r Mount not in list")
-    return false
-end
-
--- Get current character's mount list
-function CharacterMount_GetMountList()
-    local charKey = GetCharacterKey()
-    return CharacterMountDB[charKey].mounts
-end
-
----
--- Mount a random mount from the character's list (used by macro)
----
-function CharacterMount_MountRandom()
-    local mounts = CharacterMount_GetMountList()
-    
-    if #mounts == 0 then
-        print("|cffff0000Character Mount:|r No mounts in your list. Use /cmount to add mounts.")
         return
     end
-    
-    -- Pick a random mount
-    local randomIndex = math.random(1, #mounts)
-    local mountID = mounts[randomIndex]
-    
-    -- Summon the mount
-    local success, message = CharacterMount_SummonMount(mountID, nil, false)
-    if not success and message then
-        print("|cffff0000Character Mount:|r " .. message)
-    end
-end
 
----
--- Create or update the Character Mount macro
----
-function CharacterMount_CreateMacro()
-    local macroName = "CharMount"
-    local macroIcon = "136103"  -- Same icon as ZoneMount
-    local macroBody = "/run CharacterMount_MountRandom()"
-    
-    -- Check if macro already exists
-    local existingMacro = GetMacroInfo(macroName)
-    
-    if existingMacro then
-        -- Macro exists, just pick it up for the user
-        print("|cff00ff00Character Mount:|r Macro '" .. macroName .. "' already exists. Drag it to your action bar.")
-        PickupMacro(macroName)
-        return
-    end
-    
-    -- Try to create the macro
-    local macroID = CreateMacro(macroName, macroIcon, macroBody, nil)
-    
-    if macroID then
-        print("|cff00ff00Character Mount:|r Created macro '" .. macroName .. "'. Drag it to your action bar.")
-        PickupMacro(macroName)
-    else
-        print("|cffff0000Character Mount:|r Cannot create macro - macro limit reached. Please delete some macros.")
-    end
-end
-
----
--- Update the Character Mount macro (called when mounts are added/removed)
----
-function CharacterMount_UpdateMacro()
     if InCombatLockdown() then
+        print(PREFIX .. " In combat — cannot mount.")
         return
     end
-    
-    local macroName = "CharMount"
-    local macroIndex = GetMacroIndexByName(macroName)
-    
-    if macroIndex > 0 then
-        local macroIcon = "136103"
-        local macroBody = "/run CharacterMount_MountRandom()"
-        EditMacro(macroIndex, macroName, macroIcon, macroBody)
+
+    if UnitIsDeadOrGhost("player") then
+        print(PREFIX .. " Dead — cannot mount.")
+        return
     end
-end
 
--- Event handler frame
-local frame = CreateFrame("Frame")
+    if UnitInVehicle("player") or UnitOnTaxi("player") then
+        print(PREFIX .. " In vehicle or on taxi.")
+        return
+    end
 
--- Event handler
-local function OnEvent(self, event, ...)
-    if event == "ADDON_LOADED" then
-        local loadedAddon = ...
-        if loadedAddon == addonName then
-            -- Initialize character data
-            InitializeCharacterData()
-            
-            -- Addon loaded
-            print("|cff00ff00Character Mount|r loaded successfully!")
-            frame:UnregisterEvent("ADDON_LOADED")
+    if IsIndoors() then
+        print(PREFIX .. " Indoors — cannot mount.")
+        return
+    end
+
+    local category = CharacterMount_GetEligibleMountCategory()
+    print(PREFIX .. " Eligible category: " .. category)
+
+    local mountList = CharacterMount.GetEffectiveMountList()
+    print(PREFIX .. " Effective list: " .. #mountList .. " mounts.")
+
+    local usable = {}
+    for _, entry in ipairs(mountList) do
+        local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
+        if isUsable then
+            usable[#usable + 1] = entry
         end
-    elseif event == "PLAYER_LOGIN" then
-        -- Create UI elements after player login
-        CharacterMount_CreateMountListUI()
-        CharacterMount_HookMountJournalMenu()
-        
-        -- Create/update the macro
-        CharacterMount_CreateMacro()
+    end
+    print(PREFIX .. " Usable from list: " .. #usable)
+
+    -- Filter usable mounts by the eligible category
+    if #usable > 0 and category ~= CharacterMount_MOUNT_TYPE.NONE then
+        local preferred = {}
+        for _, entry in ipairs(usable) do
+            local _, _, _, _, mountTypeID, _, _, _, _, isSteadyFlight =
+                C_MountJournal.GetMountInfoExtraByID(entry.id)
+            if CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight) then
+                preferred[#preferred + 1] = entry
+            end
+        end
+        print(PREFIX .. " Matching '" .. category .. "': " .. #preferred)
+
+        -- Use preferred list if any match; otherwise fall back to all usable
+        local pool = #preferred > 0 and preferred or usable
+        local pick = pool[math.random(#pool)]
+        print(PREFIX .. " Summoning: " .. pick.name)
+        C_MountJournal.SummonByID(pick.id)
+        return
+    end
+
+    if #usable > 0 then
+        local pick = usable[math.random(#usable)]
+        print(PREFIX .. " Summoning: " .. pick.name)
+        C_MountJournal.SummonByID(pick.id)
+        return
+    end
+
+    -- Effective list is empty or nothing usable — fall back to full collection.
+    print(PREFIX .. " No list mounts usable, falling back to full collection.")
+    local allIDs = C_MountJournal.GetMountIDs()
+    if allIDs then
+        local collected = {}
+        local collectedPreferred = {}
+        for _, mountID in ipairs(allIDs) do
+            local name, _, _, _, isUsable, _, _, _, _, _, isCollected =
+                C_MountJournal.GetMountInfoByID(mountID)
+            if isCollected and isUsable and name then
+                collected[#collected + 1] = mountID
+                if category ~= CharacterMount_MOUNT_TYPE.NONE then
+                    local _, _, _, _, mountTypeID, _, _, _, _, isSteadyFlight =
+                        C_MountJournal.GetMountInfoExtraByID(mountID)
+                    if CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight) then
+                        collectedPreferred[#collectedPreferred + 1] = mountID
+                    end
+                end
+            end
+        end
+        local pool = #collectedPreferred > 0 and collectedPreferred or collected
+        if #pool > 0 then
+            local pick = pool[math.random(#pool)]
+            local name = C_MountJournal.GetMountInfoByID(pick)
+            print(PREFIX .. " Summoning: " .. tostring(name))
+            C_MountJournal.SummonByID(pick)
+            return
+        end
+    end
+
+    print(PREFIX .. " No usable mount found.")
+end
+
+-- ---------------------------------------------------------------------------
+-- Macro management
+-- ---------------------------------------------------------------------------
+
+local MACRO_NAME = "CharMount"
+local MACRO_ICON = "136103"
+local MACRO_BODY = "/run CharacterMount.MountRandom()"
+
+function CharacterMount.CreateMacro()
+    if InCombatLockdown() then
+        print(PREFIX .. " Cannot create macro during combat.")
+        return
+    end
+
+    local idx = GetMacroIndexByName(MACRO_NAME)
+    if idx and idx > 0 then
+        EditMacro(idx, MACRO_NAME, MACRO_ICON, MACRO_BODY)
+        print(PREFIX .. " Macro '" .. MACRO_NAME .. "' updated. Drag it to your action bar.")
+        PickupMacro(MACRO_NAME)
+        return
+    end
+
+    local macroID = CreateMacro(MACRO_NAME, MACRO_ICON, MACRO_BODY, nil)
+    if macroID then
+        print(PREFIX .. " Created macro '" .. MACRO_NAME .. "'. Drag it to your action bar.")
+        PickupMacro(MACRO_NAME)
+    else
+        print(PREFIX .. " Cannot create macro — macro limit reached.")
     end
 end
 
--- Register events
-frame:SetScript("OnEvent", OnEvent)
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("PLAYER_LOGIN")
-
----
--- Hook into the mount journal right-click menu
----
-function CharacterMount_HookMountJournalMenu()
-    -- Store original function
-    local originalShowDropdown = MountJournal.ShowMountDropdown
-    
-    -- Replace with our hooked version
-    MountJournal.ShowMountDropdown = function(self, mountID, anchorTo, offsetX, offsetY)
-        -- Store the mount ID for later use
-        CharacterMount_CurrentContextMountID = mountID
-        
-        -- Call original function
-        originalShowDropdown(self, mountID, anchorTo, offsetX, offsetY)
+function CharacterMount.UpdateMacro()
+    if InCombatLockdown() then return end
+    local idx = GetMacroIndexByName(MACRO_NAME)
+    if idx and idx > 0 then
+        EditMacro(idx, MACRO_NAME, MACRO_ICON, MACRO_BODY)
     end
-    
-    -- Hook the dropdown initialization to add our button
-    hooksecurefunc("UIDropDownMenu_AddButton", function(info, level)
-        -- Only add once per menu and when we have a mount ID
-        if CharacterMount_CurrentContextMountID and not CharacterMount_MenuItemAdded then
-            CharacterMount_MenuItemAdded = true
-            
-            local mountID = CharacterMount_CurrentContextMountID
-            local name = C_MountJournal.GetMountInfoByID(mountID)
-            if not name then return end
-            
-            -- Check if already in list
-            local charKey = GetCharacterKey()
-            local isInList = false
-            for _, id in ipairs(CharacterMountDB[charKey].mounts) do
-                if id == mountID then
-                    isInList = true
+end
+
+-- ---------------------------------------------------------------------------
+-- Mount Journal right-click context menu hook (TWW Menu system)
+-- ---------------------------------------------------------------------------
+
+function CharacterMount.HookMountJournalMenu()
+    if not Menu or not Menu.ModifyMenu then
+        print(PREFIX .. " Menu API not available — right-click integration disabled.")
+        return
+    end
+
+    Menu.ModifyMenu("MENU_MOUNT_JOURNAL", function(owner, rootDescription)
+        -- In TWW the owner is the mount entry button; mountID is stored on it.
+        ---@diagnostic disable-next-line: undefined-field
+        local mountID = owner and (owner.mountID or (owner.data and owner.data.mountID))
+        if not mountID then return end
+
+        local name = C_MountJournal.GetMountInfoByID(mountID)
+        if not name then return end
+
+        rootDescription:CreateDivider()
+
+        if db.additions[mountID] then
+            rootDescription:CreateButton("Remove from Character List", function()
+                CharacterMount.RemoveMount(mountID)
+            end)
+        elseif db.exclusions[mountID] then
+            rootDescription:CreateButton("Re-enable in Character List", function()
+                CharacterMount.UnexcludeMount(mountID)
+            end)
+        else
+            local isAuto = false
+            for _, entry in ipairs(CharacterMount.GetEffectiveMountList()) do
+                if entry.id == mountID and (entry.source == "racial" or entry.source == "class") then
+                    isAuto = true
                     break
                 end
             end
-            
-            -- Add separator after a slight delay to ensure it's added at the end
-            C_Timer.After(0, function()
-                CharacterMount_MenuItemAdded = false
-                
-                UIDropDownMenu_AddSeparator()
-                
-                -- Add our menu option
-                local menuInfo = UIDropDownMenu_CreateInfo()
-                if isInList then
-                    menuInfo.text = "Remove from Character List"
-                    menuInfo.func = function()
-                        CharacterMount_RemoveMount(mountID)
-                        CharacterMount_RefreshMountListUI()
-                    end
-                else
-                    menuInfo.text = "Add to Character List"
-                    menuInfo.func = function()
-                        CharacterMount_AddMount(mountID)
-                        CharacterMount_RefreshMountListUI()
-                    end
-                end
-                menuInfo.notCheckable = true
-                UIDropDownMenu_AddButton(menuInfo)
-            end)
-        end
-    end)
-    
-    print("|cff00ff00Character Mount:|r Right-click menu hook installed")
-end
-
----
--- Create simple on-screen display for mount list
----
-function CharacterMount_CreateMountListUI()
-    -- Create main frame
-    local listFrame = CreateFrame("Frame", "CharacterMountListFrame", UIParent, "BasicFrameTemplateWithInset")
-    listFrame:SetSize(300, 400)
-    listFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    listFrame:SetMovable(true)
-    listFrame:EnableMouse(true)
-    listFrame:RegisterForDrag("LeftButton")
-    listFrame:SetScript("OnDragStart", listFrame.StartMoving)
-    listFrame:SetScript("OnDragStop", listFrame.StopMovingOrSizing)
-    listFrame:Hide()  -- Hidden by default
-    
-    -- Title
-    listFrame.title = listFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    listFrame.title:SetPoint("TOP", 0, -5)
-    listFrame.title:SetText("Character Mounts")
-    
-    -- Add Mount ID input section
-    local inputLabel = listFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    inputLabel:SetPoint("TOPLEFT", listFrame, "TOPLEFT", 15, -30)
-    inputLabel:SetText("Mount ID:")
-    
-    -- Create input box
-    local inputBox = CreateFrame("EditBox", nil, listFrame, "InputBoxTemplate")
-    inputBox:SetSize(80, 20)
-    inputBox:SetPoint("LEFT", inputLabel, "RIGHT", 5, 0)
-    inputBox:SetAutoFocus(false)
-    inputBox:SetMaxLetters(10)
-    inputBox:SetNumeric(true)
-    
-    -- Add button next to input
-    local addButton = CreateFrame("Button", nil, listFrame, "UIPanelButtonTemplate")
-    addButton:SetSize(60, 22)
-    addButton:SetPoint("LEFT", inputBox, "RIGHT", 5, 0)
-    addButton:SetText("Add")
-    addButton:SetScript("OnClick", function()
-        local mountID = tonumber(inputBox:GetText())
-        if mountID and mountID > 0 then
-            if CharacterMount_AddMount(mountID) then
-                inputBox:SetText("")
-                CharacterMount_RefreshMountListUI()
+            if isAuto then
+                rootDescription:CreateButton("Exclude from Character List", function()
+                    CharacterMount.RemoveMount(mountID)
+                end)
+            else
+                rootDescription:CreateButton("Add to Character List", function()
+                    CharacterMount.AddMount(mountID)
+                end)
             end
-        else
-            print("|cffff0000Character Mount:|r Please enter a valid mount ID")
         end
     end)
-    
-    -- Allow Enter key to add
-    inputBox:SetScript("OnEnterPressed", function(self)
-        addButton:Click()
-        self:ClearFocus()
-    end)
-    
-    -- Create scroll frame
-    local scrollFrame = CreateFrame("ScrollFrame", nil, listFrame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", listFrame, "TOPLEFT", 10, -60)
-    scrollFrame:SetPoint("BOTTOMRIGHT", listFrame, "BOTTOMRIGHT", -30, 40)
-    
-    -- Create content frame
-    local content = CreateFrame("Frame", nil, scrollFrame)
-    content:SetSize(260, 1)
-    scrollFrame:SetScrollChild(content)
-    
-    listFrame.content = content
-    listFrame.mountEntries = {}
-    
-    -- Close button (X is already there from BasicFrameTemplateWithInset)
-    
-    -- Mount button at bottom
-    local mountButton = CreateFrame("Button", nil, listFrame, "UIPanelButtonTemplate")
-    mountButton:SetSize(100, 25)
-    mountButton:SetPoint("BOTTOM", listFrame, "BOTTOM", 0, 10)
-    mountButton:SetText("Mount")
-    mountButton:SetScript("OnClick", function()
-        local mounts = CharacterMount_GetMountList()
-        
-        if #mounts == 0 then
-            print("|cffff0000Character Mount:|r No mounts in your list")
-            return
-        end
-        
-        -- Pick a random mount
-        local randomIndex = math.random(1, #mounts)
-        local mountID = mounts[randomIndex]
-        
-        -- Summon the mount
-        local success, message = CharacterMount_SummonMount(mountID, nil, false)
-        if message then
-            print("|cff00ff00Character Mount:|r " .. message)
-        end
-    end)
-    
-    -- Create slash command to toggle
-    SLASH_CHARACTERMOUNT1 = "/cmount"
-    SLASH_CHARACTERMOUNT2 = "/charactermount"
-    SlashCmdList["CHARACTERMOUNT"] = function(msg)
-        if listFrame:IsShown() then
-            listFrame:Hide()
-        else
-            listFrame:Show()
-            CharacterMount_RefreshMountListUI()
-        end
-    end
-    
-    -- Store reference
-    CharacterMount_ListFrame = listFrame
 end
 
----
--- Refresh the mount list display
----
-function CharacterMount_RefreshMountListUI()
-    local listFrame = CharacterMount_ListFrame
-    if not listFrame then return end
-    
-    local content = listFrame.content
-    
-    -- Clear existing entries
-    for _, entry in ipairs(listFrame.mountEntries) do
-        entry:Hide()
-        entry:SetParent(nil)
-    end
-    listFrame.mountEntries = {}
-    
-    -- Get mount list
-    local mounts = CharacterMount_GetMountList()
-    
-    if #mounts == 0 then
-        local noMounts = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        noMounts:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -10)
-        noMounts:SetText("No mounts in list yet.\n\nOpen the Mount Journal and\nclick 'Add to List' to add mounts.")
-        table.insert(listFrame.mountEntries, noMounts)
-        return
-    end
-    
-    -- Create entries for each mount
-    local yOffset = -10
-    for i, mountID in ipairs(mounts) do
-        local name, spellID, icon = C_MountJournal.GetMountInfoByID(mountID)
-        
-        if name then
-            -- Create entry frame
-            local entry = CreateFrame("Frame", nil, content)
-            entry:SetSize(250, 30)
-            entry:SetPoint("TOPLEFT", content, "TOPLEFT", 5, yOffset)
-            
-            -- Icon
-            local iconTexture = entry:CreateTexture(nil, "ARTWORK")
-            iconTexture:SetSize(24, 24)
-            iconTexture:SetPoint("LEFT", entry, "LEFT", 5, 0)
-            iconTexture:SetTexture(icon)
-            
-            -- Name
-            local nameText = entry:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            nameText:SetPoint("LEFT", iconTexture, "RIGHT", 5, 0)
-            nameText:SetText(name)
-            nameText:SetJustifyH("LEFT")
-            nameText:SetWidth(150)
-            
-            -- Remove button
-            local removeBtn = CreateFrame("Button", nil, entry, "UIPanelButtonTemplate")
-            removeBtn:SetSize(60, 20)
-            removeBtn:SetPoint("RIGHT", entry, "RIGHT", 0, 0)
-            removeBtn:SetText("Remove")
-            removeBtn:SetScript("OnClick", function()
-                CharacterMount_RemoveMount(mountID)
-                CharacterMount_RefreshMountListUI()
-            end)
-            
-            table.insert(listFrame.mountEntries, entry)
-            yOffset = yOffset - 32
+-- ---------------------------------------------------------------------------
+-- Mount search helper
+-- ---------------------------------------------------------------------------
+
+local function FindMountsByName(partialName)
+    local lower = partialName:lower()
+    local allIDs = C_MountJournal.GetMountIDs()
+    if not allIDs then return {} end
+    local matches = {}
+    for _, mountID in ipairs(allIDs) do
+        local name, _, _, _, _, _, _, _, _, _, isCollected =
+            C_MountJournal.GetMountInfoByID(mountID)
+        if isCollected and name and name:lower():find(lower, 1, true) then
+            matches[#matches + 1] = { id = mountID, name = name }
         end
     end
-    
-    -- Update content height
-    content:SetHeight(math.max(350, math.abs(yOffset)))
+    return matches
 end
+
+-- ---------------------------------------------------------------------------
+-- Slash commands
+-- ---------------------------------------------------------------------------
+
+SLASH_CHARACTERMOUNT1 = "/cmount"
+SLASH_CHARACTERMOUNT2 = "/charactermount"
+SlashCmdList["CHARACTERMOUNT"] = function(msg)
+    msg = (msg or ""):match("^%s*(.-)%s*$")
+    local lower = msg:lower()
+
+    if lower == "" then
+        CharacterMount.CreateUI()
+        if CharacterMount.frame then
+            if CharacterMount.frame:IsShown() then
+                CharacterMount.frame:Hide()
+            else
+                CharacterMount.frame:Show()
+                CharacterMount.RefreshUI()
+            end
+        end
+    elseif lower == "macro" then
+        CharacterMount.CreateMacro()
+    elseif lower == "mount" then
+        CharacterMount.MountRandom()
+    elseif lower == "reset" then
+        db.exclusions = {}
+        if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+        print(PREFIX .. " All exclusions cleared.")
+    elseif lower == "reset all" then
+        db.exclusions = {}
+        db.additions  = {}
+        if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+        print(PREFIX .. " All exclusions and manual additions cleared.")
+    elseif lower:sub(1, 4) == "add " then
+        local arg = msg:sub(5):match("^%s*(.-)%s*$")
+        local mountID = tonumber(arg)
+        if mountID then
+            CharacterMount.AddMount(mountID)
+        else
+            local matches = FindMountsByName(arg)
+            if #matches == 0 then
+                print(PREFIX .. " No collected mount found matching '" .. arg .. "'.")
+            elseif #matches == 1 then
+                CharacterMount.AddMount(matches[1].id)
+            else
+                print(PREFIX .. " Multiple matches — use /cmount add <id>:")
+                for _, m in ipairs(matches) do
+                    print(string.format("  [%d] %s", m.id, m.name))
+                end
+            end
+        end
+    elseif lower:sub(1, 7) == "remove " then
+        local arg = msg:sub(8):match("^%s*(.-)%s*$")
+        local mountID = tonumber(arg)
+        if mountID then
+            CharacterMount.RemoveMount(mountID)
+        else
+            local matches = FindMountsByName(arg)
+            if #matches == 0 then
+                print(PREFIX .. " No collected mount found matching '" .. arg .. "'.")
+            elseif #matches == 1 then
+                CharacterMount.RemoveMount(matches[1].id)
+            else
+                print(PREFIX .. " Multiple matches — use /cmount remove <id>:")
+                for _, m in ipairs(matches) do
+                    print(string.format("  [%d] %s", m.id, m.name))
+                end
+            end
+        end
+    else
+        print(PREFIX .. " Usage:")
+        print("  /cmount              — open/close UI")
+        print("  /cmount add <name>   — add mount by name (partial ok)")
+        print("  /cmount add <id>     — add mount by ID")
+        print("  /cmount remove <name|id>")
+        print("  /cmount macro        — create action bar macro")
+        print("  /cmount mount        — mount now")
+        print("  /cmount reset        — clear all exclusions")
+        print("  /cmount reset all    — clear exclusions and manual additions")
+    end
+end
+
+-- ---------------------------------------------------------------------------
+-- Event handling
+-- ---------------------------------------------------------------------------
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("ADDON_LOADED")
+eventFrame:RegisterEvent("PLAYER_LOGIN")
+eventFrame:SetScript("OnEvent", function(_, event, ...)
+    if event == "ADDON_LOADED" then
+        local loaded = ...
+        if loaded == ADDON_NAME then
+            InitDB()
+        elseif loaded == "Blizzard_Collections" then
+            CharacterMount.HookMountJournalButton()
+            eventFrame:UnregisterEvent("ADDON_LOADED")
+        end
+    elseif event == "PLAYER_LOGIN" then
+        CharacterMount.CreateUI()
+        CharacterMount.HookMountJournalMenu()
+        if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+        -- Blizzard_Collections may already be loaded if another addon forced it
+        if C_AddOns.IsAddOnLoaded("Blizzard_Collections") then
+            CharacterMount.HookMountJournalButton()
+            eventFrame:UnregisterEvent("ADDON_LOADED")
+        end
+    end
+end)
