@@ -16,6 +16,13 @@ local HEADER_HEIGHT = 20
 local POOL_SIZE     = 60   -- pre-allocated checkbox rows
 
 local SOURCE_PRIORITY = { "class", "suggested_class", "racial", "suggested_race", "rare" }
+local SOURCE_DISPLAY_ORDER = {   -- sort order within each category
+    racial          = 1,
+    suggested_race  = 2,
+    class           = 3,
+    suggested_class = 4,
+    rare            = 5,
+}
 local SOURCE_LABELS = {
     class           = "Class",
     suggested_class = "Suggested",
@@ -143,14 +150,56 @@ local function GroupByCategory(entries)
             end
         end
 
-        -- Build ordered sub-groups: named groups first, then ungrouped
+        -- Sort helper: by source display order, then alphabetically
+        local function sortEntries(a, b)
+            local oa = SOURCE_DISPLAY_ORDER[a.source] or 99
+            local ob = SOURCE_DISPLAY_ORDER[b.source] or 99
+            if oa ~= ob then return oa < ob end
+            return (a.name or "") < (b.name or "")
+        end
+
+        -- Build sub-groups list
         local result = {}
+
+        -- Named groups stay together as one block each
         for _, grp in ipairs(groupOrder) do
+            table.sort(byGroup[grp], sortEntries)
             result[#result + 1] = { group = grp, entries = byGroup[grp] }
         end
+
+        -- Split ungrouped entries by source so each source sorts independently
         if #ungrouped > 0 then
-            result[#result + 1] = { group = nil, entries = ungrouped }
+            local bySource = {}
+            local sourcesSeen = {}
+            for _, entry in ipairs(ungrouped) do
+                local src = entry.source
+                if not bySource[src] then
+                    bySource[src] = {}
+                    sourcesSeen[#sourcesSeen + 1] = src
+                end
+                bySource[src][#bySource[src] + 1] = entry
+            end
+            for _, src in ipairs(sourcesSeen) do
+                table.sort(bySource[src], sortEntries)
+                result[#result + 1] = { group = nil, entries = bySource[src] }
+            end
         end
+
+        -- Sort all blocks by source display order, then groups before singles
+        table.sort(result, function(a, b)
+            local ea = a.entries[1]
+            local eb = b.entries[1]
+            local oa = ea and (SOURCE_DISPLAY_ORDER[ea.source] or 99) or 99
+            local ob = eb and (SOURCE_DISPLAY_ORDER[eb.source] or 99) or 99
+            if oa ~= ob then return oa < ob end
+            -- Same source: named groups before ungrouped singles
+            local aGrouped = a.group and true or false
+            local bGrouped = b.group and true or false
+            if aGrouped ~= bGrouped then return aGrouped end
+            -- Both grouped or both ungrouped: alphabetical by group name
+            if a.group and b.group then return a.group < b.group end
+            return false
+        end)
 
         catGroups[cat] = result
     end
@@ -606,5 +655,6 @@ function CharacterMount.ResetOnboarding()
     CharacterMount.db.additions  = {}
     CharacterMount.db.exclusions = {}
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
-    print(PREFIX .. " Onboarding reset. Type /reload to trigger it again.")
+    CharacterMount.ShowOnboarding()
+    print(PREFIX .. " Onboarding reset.")
 end

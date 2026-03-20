@@ -435,6 +435,33 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
                 end
             end
         end
+    elseif lower == "debug" then
+        print(PREFIX .. " --- Debug for " .. tostring(charKey) .. " ---")
+        if not db then
+            print("  ERROR: db is nil — saved variables not loaded")
+        else
+            print("  onboardingComplete: " .. tostring(db.onboardingComplete))
+            local addCount = 0
+            for _ in pairs(db.additions or {})  do addCount = addCount + 1 end
+            local exclCount = 0
+            for _ in pairs(db.exclusions or {}) do exclCount = exclCount + 1 end
+            print("  additions: " .. addCount)
+            if addCount > 0 and addCount <= 20 then
+                for id in pairs(db.additions) do
+                    local name = C_MountJournal.GetMountInfoByID(id)
+                    print("    [" .. id .. "] " .. tostring(name))
+                end
+            end
+            print("  exclusions: " .. exclCount)
+            if exclCount > 0 and exclCount <= 20 then
+                for id in pairs(db.exclusions) do
+                    local name = C_MountJournal.GetMountInfoByID(id)
+                    print("    [" .. id .. "] " .. tostring(name))
+                end
+            end
+            local effective = CharacterMount.GetEffectiveMountList()
+            print("  effective list: " .. #effective .. " mounts")
+        end
     else
         print(PREFIX .. " Usage:")
         print("  /cmount              — open/close UI")
@@ -446,6 +473,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         print("  /cmount reset            — clear all exclusions")
         print("  /cmount reset all        — clear exclusions and manual additions")
         print("  /cmount reset onboarding — reset and re-trigger onboarding")
+        print("  /cmount debug            — show saved state for this character")
     end
 end
 
@@ -456,22 +484,31 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
+local addonLoaded_self       = false
+local addonLoaded_collections = false
 eventFrame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
         local loaded = ...
         if loaded == ADDON_NAME then
             InitDB()
-        elseif loaded == "Blizzard_Collections" then
+            addonLoaded_self = true
+        end
+        if loaded == "Blizzard_Collections" then
             CharacterMount.HookMountJournalButton()
+            addonLoaded_collections = true
+        end
+        if addonLoaded_self and addonLoaded_collections then
             eventFrame:UnregisterEvent("ADDON_LOADED")
         end
     elseif event == "PLAYER_LOGIN" then
         CharacterMount.CreateUI()
         CharacterMount.HookMountJournalMenu()
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
-        -- Blizzard_Collections may already be loaded if another addon forced it
         if C_AddOns.IsAddOnLoaded("Blizzard_Collections") then
             CharacterMount.HookMountJournalButton()
+            addonLoaded_collections = true
+        end
+        if addonLoaded_self and addonLoaded_collections then
             eventFrame:UnregisterEvent("ADDON_LOADED")
         end
         -- Trigger onboarding for new characters

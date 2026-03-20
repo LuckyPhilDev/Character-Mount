@@ -84,6 +84,18 @@ MD.RACIAL_MOUNTS = {
         499,  -- Great Blue Dragon Turtle
         500,  -- Great Brown Dragon Turtle
         501,  -- Great Purple Dragon Turtle
+        450,  -- Pandaren Kite
+        516,  -- Pandaren Kite
+        464,  -- Azure Cloud Serpent
+        465,  -- Golden Cloud Serpent
+        471,  -- Onyx Cloud Serpent
+        472,  -- Crimson Cloud Serpent
+        517,  -- Thundering Ruby Cloud Serpent
+        518,  -- Ashen Pandaren Phoenix
+        519,  -- Emerald Pandaren Phoenix
+        520,  -- Violet Pandaren Phoenix
+        521,  -- Jade Pandaren Kite
+        2069, -- Feathered Windsurfer
     },
 
     -- -----------------------------------------------------------------------
@@ -163,6 +175,10 @@ MD.RACIAL_MOUNTS = {
         161,  -- Swift Purple Hawkstrider
         320,  -- Swift Red Hawkstrider
         213,  -- Swift White Hawkstrider
+        291,  -- Blue Dragonhawk
+        292,  -- Red Dragonhawk
+        330,  -- Sunreaver Dragonhawk
+        548,  -- Armored Red Dragonhawk
     },
 
     ["Goblin"] = {
@@ -334,9 +350,17 @@ RegisterGroup("Dragon Turtles",  {452, 453, 492, 493, 494, 495, 496, 497, 498, 4
 RegisterGroup("Gryphons",        {129, 130, 131, 132, 137, 138, 139})
 RegisterGroup("Wind Riders",     {133, 134, 135, 136, 140, 141})
 RegisterGroup("Hippogryphs",     {203, 329, 413, 568})
-RegisterGroup("Dragonhawks",     {291, 292, 330, 548})
-RegisterGroup("Cloud Serpents",   {523, 524, 525})
+RegisterGroup("Dragonhawks",     {291, 292, 330, 548, 549})
+RegisterGroup("Cloud Serpents",   {464, 465, 471, 472, 478, 517, 466, 473, 474, 475, 477, 504, 542, 561, 2582})
+RegisterGroup("Kites",           {450, 516, 521, 2069})
+RegisterGroup("Carpets",        {279, 285, 375, 603, 905, 2023, 2317})
+RegisterGroup("Proto-Drakes",   {262, 263, 264, 265, 266, 267, 278, 306, 307, 1030, 1031, 1032, 1035, 1589, 1679, 1786})
+RegisterGroup("Drakes",         {246, 247, 248, 249, 250, 253, 268, 349, 391, 392, 393, 394, 395, 396, 397, 407, 408, 442, 664, 1314, 1563, 1607, 1771})
 RegisterGroup("Bats",            {544, 1049, 1210})
+RegisterGroup("Yaks",            {460, 462, 484, 485, 486, 487})
+RegisterGroup("Manasabers",      {881, 1008, 2670})
+RegisterGroup("Shado-Pan Tigers", {505, 506, 507, 2087})
+RegisterGroup("Bonesteeds",      {1196, 1197, 2679, 2681, 2682, 2683})
 
 -- Class mount families
 RegisterGroup("Paladin Chargers",   {41, 84, 150, 149, 350, 351, 367, 368, 1047, 1046, 1225, 1568, 885, 892, 893, 894, 2726, 338, 339})
@@ -371,9 +395,9 @@ MD.SUGGESTED_MOUNTS = {
         ["Draenei"]           = { 132, 137, 139, 130, 131 },
         ["Worgen"]            = { 132, 137, 130, 131 },
         -- Night Elf — Hippogryphs
-        ["NightElf"]          = { 203, 329, 413, 568, 393 },
-        -- Pandaren — Cloud Serpents
-        ["Pandaren"]          = { 523, 524, 525, 566 },
+        ["NightElf"]          = { 203, 329, 413, 568, 393, 1577 },
+        -- Pandaren — Thundering / Heavenly Cloud Serpents
+        ["Pandaren"]          = { 460, 462, 466, 473, 474, 475, 477, 478, 484, 485, 486, 487, 504, 505, 506, 507, 542, 561, 2087, 2582 },
         -- Allied — Alliance
         ["VoidElf"]           = { 139, 132, 130 },
         ["LightforgedDraenei"]= { 132, 139, 130 },
@@ -387,11 +411,10 @@ MD.SUGGESTED_MOUNTS = {
         ["Troll"]             = { 136, 140, 133, 134, 78 },
         ["Goblin"]            = { 136, 205, 133, 134, 275, 574 },
         -- Undead — Bats
-        ["Undead"]            = { 544, 1049, 1210, 168 },
-        -- Blood Elf — Dragonhawks
-        ["BloodElf"]          = { 292, 291, 330, 548 },
+        ["Undead"]            = { 544, 1049, 1210, 168, 1196, 1197, 2679, 2681, 2682, 2683 },
+        ["BloodElf"]          = {},
         -- Allied — Horde
-        ["Nightborne"]        = { 136, 141, 133 },
+        ["Nightborne"]        = { 136, 141, 133, 881, 2670 },
         ["HighmountainTauren"]= { 136, 140, 133 },
         ["MagharOrc"]         = { 136, 140, 141, 133, 341, 522 },
         ["ZandalariTroll"]    = { 1043, 136, 133, 78 },
@@ -404,14 +427,14 @@ MD.SUGGESTED_MOUNTS = {
 
     class = {
         ["PALADIN"]     = { 2726, 338, 339 },
-        ["WARLOCK"]     = { 2730, 168 },
-        ["DEATHKNIGHT"] = { 2720, 168, 219, 238 },
+        ["WARLOCK"]     = { 2730, 168, 279, 285, 375, 603, 905, 2023, 2317 },
+        ["DEATHKNIGHT"] = { 2720, 168, 219, 238, 1196, 1197, 2679, 2681, 2682, 2683 },
         ["DEMONHUNTER"] = { 2721 },
         ["DRUID"]       = { 2722, 393, 845 },
         ["HUNTER"]      = { 2723, 522, 78, 280 },
-        ["MAGE"]        = { 2724, 566 },
+        ["MAGE"]        = { 2724, 566, 279, 285, 375, 603, 905, 2023, 2317 },
         ["MONK"]        = { 2725, 566, 523, 524, 525 },
-        ["PRIEST"]      = { 2727 },
+        ["PRIEST"]      = { 2727, 279, 285, 375, 603, 905, 2023, 2317 },
         ["ROGUE"]       = { 2728, 168 },
         ["SHAMAN"]      = { 2729, 280 },
         ["WARRIOR"]     = { 2731, 341, 338 },
@@ -427,8 +450,6 @@ MD.RARE_MOUNTS = {
     -- Classic / Wrath iconic
     363,  -- Invincible
     219,  -- Headless Horseman's Mount
-    248,  -- Bronze Drake
-    250,  -- Twilight Drake
     405,  -- Spectral Steed
     237,  -- White Polar Bear
 
@@ -439,10 +460,6 @@ MD.RARE_MOUNTS = {
 
     -- Wrath of the Lich King
     304,  -- Mimiron's Head
-    264,  -- Blue Proto-Drake
-    265,  -- Time-Lost Proto-Drake
-    306,  -- Ironbound Proto-Drake
-    307,  -- Rusted Proto-Drake
 
     -- Cataclysm
     393,  -- Phosphorescent Stone Drake
@@ -452,13 +469,6 @@ MD.RARE_MOUNTS = {
     392,  -- Drake of the East Wind
     394,  -- Drake of the West Wind
     407,  -- Vial of the Sands
-
-    -- Mists of Pandaria
-    473,  -- Heavenly Onyx Cloud Serpent
-    478,  -- Astral Cloud Serpent
-    542,  -- Thundering Cobalt Cloud Serpent
-    561,  -- Thundering Onyx Cloud Serpent
-    463,  -- Amber Scorpion
 
     -- Warlords of Draenor
     634,  -- Solar Spirehawk
@@ -473,7 +483,6 @@ MD.RARE_MOUNTS = {
 
     -- Battle for Azeroth
     1217, -- G.M.O.D.
-    1039, -- Mighty Caravan Brutosaur
     1053, -- Underrot Crawg
     1219, -- Glacial Tidestorm
     1218, -- Dazar'alor Windreaver
@@ -483,12 +492,6 @@ MD.RARE_MOUNTS = {
     1500, -- Sanctum Gloomcharger
     1481, -- Cartel Master's Gearglider
     1417, -- Hand of Hrestimorak
-
-    -- Dragonflight
-    1589, -- Renewed Proto-Drake
-    1563, -- Highland Drake
-    1591, -- Cliffside Wylderdrake
-    1590, -- Windborne Velocidrake
 
     -- Utility / valuable mounts
     449,  -- Azure Water Strider
