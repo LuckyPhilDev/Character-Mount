@@ -1,7 +1,7 @@
-package-as: CharacterMount
+package-as: Lucky_Character_Mount
 
 move-folders:
-  Character Mount/CharacterMount: CharacterMount
+  Character Mount/Lucky_Character_Mount: Lucky_Character_Mount
 
 manual-changelog:
   filename: CHANGELOG.md
