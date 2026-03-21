@@ -23,9 +23,8 @@ local MOUNT_TYPE_IDS = {
 -- Class and racial ability spell IDs
 local CLASS_ABILITIES = {
     DRUID = {
-        TRAVEL_FORM = 783,        -- Ground/water travel form
-        FLIGHT_FORM = 165962,     -- Flying form (also includes travel form)
-        AQUATIC_FORM = 1066,      -- Aquatic form (old)
+        TRAVEL_FORM = 783,        -- Adapts to context: flight, ground, aquatic
+        AQUATIC_FORM = 1066,      -- Aquatic form (old, pre-Travel Form)
     },
     SHAMAN = {
         GHOST_WOLF = 2645,        -- Ghost Wolf
@@ -93,25 +92,15 @@ function CharacterMount_CanUseTravelForm(mountType)
     local race = GetPlayerRace()
     local playerLevel = UnitLevel("player")
     
-    -- Druid forms
+    -- Druid Travel Form adapts to context: flight in flyable areas,
+    -- cheetah on ground, aquatic in water.  One spell covers all types.
     if class == "DRUID" then
-        if mountType == MOUNT_TYPE.FLYING then
-            -- Flight Form requires level 30+ (or appropriate expansion)
-            if IsSpellKnownByPlayer(CLASS_ABILITIES.DRUID.FLIGHT_FORM) then
-                return true, CLASS_ABILITIES.DRUID.FLIGHT_FORM
-            end
-        elseif mountType == MOUNT_TYPE.WATER then
-            -- Travel Form works in water, or use Aquatic Form
-            if IsSpellKnownByPlayer(CLASS_ABILITIES.DRUID.TRAVEL_FORM) then
-                return true, CLASS_ABILITIES.DRUID.TRAVEL_FORM
-            elseif IsSpellKnownByPlayer(CLASS_ABILITIES.DRUID.AQUATIC_FORM) then
-                return true, CLASS_ABILITIES.DRUID.AQUATIC_FORM
-            end
-        elseif mountType == MOUNT_TYPE.GROUND then
-            -- Travel Form for ground movement
-            if IsSpellKnownByPlayer(CLASS_ABILITIES.DRUID.TRAVEL_FORM) then
-                return true, CLASS_ABILITIES.DRUID.TRAVEL_FORM
-            end
+        if IsSpellKnownByPlayer(CLASS_ABILITIES.DRUID.TRAVEL_FORM) then
+            return true, CLASS_ABILITIES.DRUID.TRAVEL_FORM
+        end
+        -- Fallback for very low-level characters without Travel Form
+        if mountType == MOUNT_TYPE.WATER and IsSpellKnownByPlayer(CLASS_ABILITIES.DRUID.AQUATIC_FORM) then
+            return true, CLASS_ABILITIES.DRUID.AQUATIC_FORM
         end
     end
     

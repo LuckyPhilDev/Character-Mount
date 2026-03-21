@@ -20,11 +20,12 @@ local POOL_SIZE     = 60   -- pre-allocated checkbox rows
 
 local SOURCE_PRIORITY = { "class", "suggested_class", "racial", "suggested_race", "rare" }
 local SOURCE_DISPLAY_ORDER = {   -- sort order within each category
-    racial          = 1,
-    suggested_race  = 2,
-    class           = 3,
-    suggested_class = 4,
-    rare            = 5,
+    class_form      = 1,
+    racial          = 2,
+    suggested_race  = 3,
+    class           = 4,
+    suggested_class = 5,
+    rare            = 6,
 }
 
 local CATEGORY_ORDER  = { "ground", "flying", "water" }
@@ -68,9 +69,41 @@ local function BuildCandidates()
         rare            = MD.GetRareMountIDs(),
     }
 
+    -- Inject spell-based class forms (e.g. Druid Travel Form)
+    local formEntries = {}
+    for _, form in pairs(CharacterMount.FORM_SPELLS) do
+        local spellInfo = C_Spell.GetSpellInfo(form.spellID)
+        if spellInfo then
+            local isUsable = C_Spell.IsSpellUsable(form.spellID)
+            if isUsable then
+                -- For display purposes, "all" category forms appear under
+                -- "ground" in onboarding (Travel Form's primary visual is
+                -- the cheetah).  The actual mount-selection logic knows it
+                -- matches every category.
+                local displayCat = form.category == "all" and "ground" or form.category
+                formEntries[#formEntries + 1] = {
+                    id       = "spell:" .. form.spellID,
+                    spellID  = form.spellID,
+                    name     = spellInfo.name,
+                    icon     = spellInfo.iconID,
+                    source   = "class_form",
+                    category = displayCat,
+                    group    = nil,
+                    checked  = true,
+                }
+            end
+        end
+    end
+
     -- Dedupe across sources (higher priority source wins)
     local seen = {}
     local entries = {}   -- { id, name, icon, source, category, checked }
+
+    -- Add form entries first (highest priority — class abilities)
+    for _, entry in ipairs(formEntries) do
+        seen[entry.id] = true
+        entries[#entries + 1] = entry
+    end
 
     for _, source in ipairs(SOURCE_PRIORITY) do
         for _, mountID in ipairs(pools[source]) do
@@ -639,6 +672,8 @@ function CharacterMount.ApplyOnboarding()
 
     print(PREFIX .. " Added " .. count .. " mounts to your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+    -- Pre-roll the macro so the first click is ready.
+    CharacterMount.PreRoll()
 end
 
 -- ---------------------------------------------------------------------------

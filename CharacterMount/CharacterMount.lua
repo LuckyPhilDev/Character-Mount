@@ -12,6 +12,7 @@ local PREFIX     = LuckyUI.WC.goldAccent .. "CharMount:" .. LuckyUI.WC.reset
 CharacterMount.SourceColor = {
     racial          = LuckyUI.WC.info,
     class           = LuckyUI.WC.goldAccent,
+    class_form      = LuckyUI.WC.goldAccent,
     manual          = LuckyUI.WC.success,
     suggested_class = LuckyUI.WC.success,
     suggested_race  = LuckyUI.WC.info,
@@ -21,6 +22,7 @@ CharacterMount.SourceColor = {
 CharacterMount.SourceLabel = {
     racial          = "Racial",
     class           = "Class",
+    class_form      = "Class",
     manual          = "Manual",
     suggested_class = "Suggested",
     suggested_race  = "Racial",
@@ -31,11 +33,27 @@ CharacterMount.SourceLabel = {
 CharacterMount.SourcePillRGB = {
     racial          = LuckyUI.C.info,
     class           = LuckyUI.C.goldAccent,
+    class_form      = LuckyUI.C.goldAccent,
     manual          = LuckyUI.C.success,
     suggested_class = LuckyUI.C.success,
     suggested_race  = LuckyUI.C.info,
     rare            = LuckyUI.C.purple,
 }
+
+-- Spell-based "mounts" (class/racial forms). Keyed by a synthetic ID
+-- constructed as "spell:<spellID>". Entries store the spell info needed
+-- to cast the form and display it in the UI.
+-- Travel Form (783) adapts to context: flight in flyable areas, cheetah on
+-- ground, aquatic in water — so a single entry with category "all" is correct.
+CharacterMount.FORM_SPELLS = {
+    DRUID_TRAVEL = { spellID = 783, name = "Travel Form", category = "all" },
+}
+
+-- Reverse lookup: spellID → category (used by MountRandom for type matching)
+CharacterMount.FORM_SPELLS_BY_ID = {}
+for _, form in pairs(CharacterMount.FORM_SPELLS) do
+    CharacterMount.FORM_SPELLS_BY_ID[form.spellID] = form.category
+end
 
 -- Module-level references set during ADDON_LOADED
 local db      -- CharacterMountDB[charKey] for the current character
@@ -132,15 +150,38 @@ function CharacterMount.GetEffectiveMountList()
         for _, entry in ipairs(GetClassMounts())  do addIfNew(entry) end
     end
 
-    for mountID, source in pairs(db.additions) do
-        if not seen[mountID] and not db.exclusions[mountID] then
-            local name, _, icon, _, _, _, _, _, _, _, isCollected =
-                C_MountJournal.GetMountInfoByID(mountID)
-            if isCollected and name then
-                seen[mountID] = true
-                -- source is the stored origin; legacy entries store `true`
-                local srcTag = (type(source) == "string") and source or "manual"
-                result[#result + 1] = { id = mountID, name = name, icon = icon, source = srcTag }
+    for key, source in pairs(db.additions) do
+        print(PREFIX .. " [LIST] Processing addition key=" .. tostring(key)
+            .. " (type=" .. type(key) .. ") source=" .. tostring(source)
+            .. " seen=" .. tostring(seen[key])
+            .. " excluded=" .. tostring(db.exclusions[key]))
+        if not seen[key] and not db.exclusions[key] then
+            -- Check for spell-based form entries (keyed as "spell:<id>")
+            local spellID = type(key) == "string" and tonumber(key:match("^spell:(%d+)$"))
+            print(PREFIX .. " [LIST] Parsed spellID=" .. tostring(spellID))
+            if spellID then
+                local spellInfo = C_Spell.GetSpellInfo(spellID)
+                print(PREFIX .. " [LIST] C_Spell.GetSpellInfo(" .. spellID .. ") → "
+                    .. tostring(spellInfo and spellInfo.name or "nil"))
+                if spellInfo then
+                    seen[key] = true
+                    local srcTag = (type(source) == "string") and source or "class_form"
+                    result[#result + 1] = {
+                        id      = key,
+                        spellID = spellID,
+                        name    = spellInfo.name,
+                        icon    = spellInfo.iconID,
+                        source  = srcTag,
+                    }
+                end
+            else
+                local name, _, icon, _, _, _, _, _, _, _, isCollected =
+                    C_MountJournal.GetMountInfoByID(key)
+                if isCollected and name then
+                    seen[key] = true
+                    local srcTag = (type(source) == "string") and source or "manual"
+                    result[#result + 1] = { id = key, name = name, icon = icon, source = srcTag }
+                end
             end
         end
     end
@@ -162,15 +203,25 @@ function CharacterMount.AddMount(mountID)
     db.additions[mountID]  = "manual"
     print(PREFIX .. " Added " .. name .. " to your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+    CharacterMount.PreRoll()
     return true
 end
 
 function CharacterMount.RemoveMount(mountID)
-    local name = C_MountJournal.GetMountInfoByID(mountID) or "mount"
+    local name
+    -- Handle spell-form IDs (e.g. "spell:783")
+    local spellID = type(mountID) == "string" and tonumber(mountID:match("^spell:(%d+)$"))
+    if spellID then
+        local spellInfo = C_Spell.GetSpellInfo(spellID)
+        name = spellInfo and spellInfo.name or "form"
+    else
+        name = C_MountJournal.GetMountInfoByID(mountID) or "mount"
+    end
     db.additions[mountID]  = nil
     db.exclusions[mountID] = true
     print(PREFIX .. " Removed " .. name .. " from your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+    CharacterMount.PreRoll()
 end
 
 function CharacterMount.UnexcludeMount(mountID)
@@ -186,6 +237,19 @@ end
 function CharacterMount.MountRandom()
     print(PREFIX .. " MountRandom called.")
 
+    -- ── State diagnostics ──
+    print(PREFIX .. " [STATE] IsMounted=" .. tostring(IsMounted())
+        .. " IsFlying=" .. tostring(IsFlying())
+        .. " InCombat=" .. tostring(InCombatLockdown())
+        .. " IsIndoors=" .. tostring(IsIndoors())
+        .. " IsDead=" .. tostring(UnitIsDeadOrGhost("player"))
+        .. " InVehicle=" .. tostring(UnitInVehicle("player")))
+
+    local _, playerClass = UnitClass("player")
+    local formIndex = GetShapeshiftFormID()
+    print(PREFIX .. " [STATE] Class=" .. tostring(playerClass)
+        .. " ShapeshiftFormID=" .. tostring(formIndex))
+
     if IsMounted() then
         if IsFlying() then
             print(PREFIX .. " Flying — cannot dismount.")
@@ -194,6 +258,16 @@ function CharacterMount.MountRandom()
             Dismount()
         end
         return
+    end
+
+    -- Druid Travel Form doesn't count as "mounted" but should toggle off
+    -- when the player clicks the mount button again.
+    if formIndex and formIndex > 0 then
+        if playerClass == "DRUID" then
+            print(PREFIX .. " Cancelling shapeshift form (formID=" .. formIndex .. ").")
+            CancelShapeshiftForm()
+            return
+        end
     end
 
     if InCombatLockdown() then
@@ -222,14 +296,48 @@ function CharacterMount.MountRandom()
     local mountList = CharacterMount.GetEffectiveMountList()
     print(PREFIX .. " Effective list: " .. #mountList .. " mounts.")
 
+    -- ── Dump the full effective list for diagnostics ──
+    for i, entry in ipairs(mountList) do
+        print(PREFIX .. "   [" .. i .. "] id=" .. tostring(entry.id)
+            .. " name=" .. tostring(entry.name)
+            .. " spellID=" .. tostring(entry.spellID)
+            .. " source=" .. tostring(entry.source))
+    end
+
+    -- ── Dump saved variables state ──
+    print(PREFIX .. " [DB] onboardingComplete=" .. tostring(db.onboardingComplete))
+    local addCount, exclCount = 0, 0
+    for k, v in pairs(db.additions) do
+        addCount = addCount + 1
+        print(PREFIX .. "   [DB.additions] key=" .. tostring(k)
+            .. " (type=" .. type(k) .. ") value=" .. tostring(v))
+    end
+    for k, v in pairs(db.exclusions) do
+        exclCount = exclCount + 1
+        print(PREFIX .. "   [DB.exclusions] key=" .. tostring(k)
+            .. " (type=" .. type(k) .. ") value=" .. tostring(v))
+    end
+    print(PREFIX .. " [DB] additions=" .. addCount .. " exclusions=" .. exclCount)
+
+    -- MountRandom only handles journal mounts.  Spell forms (Travel Form etc.)
+    -- are cast via /cast in the macro text — see PreRoll().
+    -- Filter to journal mounts only.
     local usable = {}
     for _, entry in ipairs(mountList) do
-        local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
-        if isUsable then
-            usable[#usable + 1] = entry
+        if not entry.spellID then
+            local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
+            print(PREFIX .. " [MOUNT CHECK] id=" .. tostring(entry.id)
+                .. " name=" .. tostring(entry.name)
+                .. " isUsable=" .. tostring(isUsable))
+            if isUsable then
+                usable[#usable + 1] = entry
+            end
+        else
+            print(PREFIX .. " [SKIP SPELL] " .. tostring(entry.name)
+                .. " (handled by macro /cast)")
         end
     end
-    print(PREFIX .. " Usable from list: " .. #usable)
+    print(PREFIX .. " Usable journal mounts: " .. #usable)
 
     -- Filter usable mounts by the eligible category
     if #usable > 0 and category ~= CharacterMount_MOUNT_TYPE.NONE then
@@ -237,23 +345,27 @@ function CharacterMount.MountRandom()
         for _, entry in ipairs(usable) do
             local _, _, _, _, mountTypeID, _, _, _, _, isSteadyFlight =
                 C_MountJournal.GetMountInfoExtraByID(entry.id)
-            if CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight) then
+            local isMatch = CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight)
+            print(PREFIX .. " [CAT MATCH] mountID=" .. tostring(entry.id)
+                .. " typeID=" .. tostring(mountTypeID)
+                .. " steadyFlight=" .. tostring(isSteadyFlight)
+                .. " match=" .. tostring(isMatch))
+            if isMatch then
                 preferred[#preferred + 1] = entry
             end
         end
         print(PREFIX .. " Matching '" .. category .. "': " .. #preferred)
 
-        -- Use preferred list if any match; otherwise fall back to all usable
         local pool = #preferred > 0 and preferred or usable
         local pick = pool[math.random(#pool)]
-        print(PREFIX .. " Summoning: " .. pick.name)
+        print(PREFIX .. " Picked from pool of " .. #pool .. ": " .. pick.name)
         C_MountJournal.SummonByID(pick.id)
         return
     end
 
     if #usable > 0 then
         local pick = usable[math.random(#usable)]
-        print(PREFIX .. " Summoning: " .. pick.name)
+        print(PREFIX .. " Picked (no category filter): " .. pick.name)
         C_MountJournal.SummonByID(pick.id)
         return
     end
@@ -294,10 +406,97 @@ end
 -- ---------------------------------------------------------------------------
 -- Macro management
 -- ---------------------------------------------------------------------------
+-- Protected spells (Druid Travel Form) cannot be cast from Lua — they must
+-- be invoked via /cast in macro text.  To support random selection that
+-- includes both journal mounts and spell forms we use a "pre-roll" pattern:
+--
+--   1.  Each macro click ends with "/cmount roll" which randomly picks the
+--       NEXT mount/form and rewrites the macro text accordingly.
+--   2.  On the first click (before any roll has happened) the macro just
+--       runs "/cmount mount" as a fallback, then "/cmount roll".
+--   3.  When a spell form wins the roll the macro is rewritten to:
+--           /dismount [mounted]
+--           /cast Travel Form
+--           /cmount roll
+--       When a journal mount wins:
+--           /cmount mount
+--           /cmount roll
+--
+-- This means each click executes the action chosen by the PREVIOUS roll,
+-- then immediately pre-rolls for the next click.
+-- ---------------------------------------------------------------------------
 
 local MACRO_NAME = "CharMount"
 local MACRO_ICON = "136103"
-local MACRO_BODY = "/run CharacterMount.MountRandom()"
+
+--- Build macro body for a given pre-rolled result.
+--- @param spellName string|nil  If non-nil, the macro casts this spell form.
+function CharacterMount.BuildMacroBody(spellName)
+    if spellName then
+        -- Spell form: /cast handles the protected action, /cmount roll
+        -- pre-rolls for the next click.
+        return "/dismount [mounted]\n/cast " .. spellName .. "\n/cmount roll"
+    end
+    -- Journal mount: /cmount mount summons via SummonByID, then pre-roll.
+    return "/cmount mount\n/cmount roll"
+end
+
+--- Pre-roll: randomly pick the next mount/form from the usable pool
+--- and rewrite the macro so the next click executes it.
+function CharacterMount.PreRoll()
+    if InCombatLockdown() then return end
+
+    local idx = GetMacroIndexByName(MACRO_NAME)
+    if not idx or idx == 0 then return end
+
+    local mountList = CharacterMount.GetEffectiveMountList()
+    local category  = CharacterMount_GetEligibleMountCategory()
+
+    -- Build usable + preferred pools (same logic as MountRandom)
+    local usable, preferred = {}, {}
+    for _, entry in ipairs(mountList) do
+        local ok = false
+        if entry.spellID then
+            ok = IsSpellKnown(entry.spellID)
+        else
+            local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
+            ok = isUsable
+        end
+        if ok then
+            usable[#usable + 1] = entry
+            if entry.spellID then
+                local formCat = CharacterMount.FORM_SPELLS_BY_ID[entry.spellID]
+                if formCat == "all" or formCat == category then
+                    preferred[#preferred + 1] = entry
+                end
+            elseif category ~= CharacterMount_MOUNT_TYPE.NONE then
+                local _, _, _, _, mountTypeID, _, _, _, _, isSteadyFlight =
+                    C_MountJournal.GetMountInfoExtraByID(entry.id)
+                if CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight) then
+                    preferred[#preferred + 1] = entry
+                end
+            end
+        end
+    end
+
+    local pool = #preferred > 0 and preferred or usable
+    if #pool == 0 then
+        print(PREFIX .. " [ROLL] No usable mounts for next click.")
+        return
+    end
+
+    local pick = pool[math.random(#pool)]
+    local body
+    if pick.spellID then
+        print(PREFIX .. " [ROLL] Next click → spell: " .. pick.name)
+        body = CharacterMount.BuildMacroBody(pick.name)
+    else
+        print(PREFIX .. " [ROLL] Next click → mount: " .. pick.name)
+        body = CharacterMount.BuildMacroBody(nil)
+    end
+
+    EditMacro(idx, MACRO_NAME, MACRO_ICON, body)
+end
 
 function CharacterMount.CreateMacro()
     if InCombatLockdown() then
@@ -305,15 +504,17 @@ function CharacterMount.CreateMacro()
         return
     end
 
+    -- Start with journal-mount body; first click will mount + pre-roll.
+    local body = CharacterMount.BuildMacroBody(nil)
     local idx = GetMacroIndexByName(MACRO_NAME)
     if idx and idx > 0 then
-        EditMacro(idx, MACRO_NAME, MACRO_ICON, MACRO_BODY)
+        EditMacro(idx, MACRO_NAME, MACRO_ICON, body)
         print(PREFIX .. " Macro '" .. MACRO_NAME .. "' updated. Drag it to your action bar.")
         PickupMacro(MACRO_NAME)
         return
     end
 
-    local macroID = CreateMacro(MACRO_NAME, MACRO_ICON, MACRO_BODY, nil)
+    local macroID = CreateMacro(MACRO_NAME, MACRO_ICON, body, nil)
     if macroID then
         print(PREFIX .. " Created macro '" .. MACRO_NAME .. "'. Drag it to your action bar.")
         PickupMacro(MACRO_NAME)
@@ -326,7 +527,8 @@ function CharacterMount.UpdateMacro()
     if InCombatLockdown() then return end
     local idx = GetMacroIndexByName(MACRO_NAME)
     if idx and idx > 0 then
-        EditMacro(idx, MACRO_NAME, MACRO_ICON, MACRO_BODY)
+        -- Re-roll so the macro reflects current mount list.
+        CharacterMount.PreRoll()
     end
 end
 
@@ -423,6 +625,8 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         CharacterMount.CreateMacro()
     elseif lower == "mount" then
         CharacterMount.MountRandom()
+    elseif lower == "roll" then
+        CharacterMount.PreRoll()
     elseif lower == "reset" then
         db.exclusions = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
