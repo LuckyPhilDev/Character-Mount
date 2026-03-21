@@ -3,7 +3,29 @@
 CharacterMount = CharacterMount or {}
 
 local ADDON_NAME = "CharacterMount"
-local PREFIX     = "|cff00cc00CharMount:|r"
+local PREFIX     = LuckyUI.WC.goldAccent .. "CharMount:" .. LuckyUI.WC.reset
+
+-- ---------------------------------------------------------------------------
+-- Mount source display (domain-specific, references LuckyUI colors)
+-- ---------------------------------------------------------------------------
+
+CharacterMount.SourceColor = {
+    racial          = LuckyUI.WC.info,
+    class           = LuckyUI.WC.goldAccent,
+    manual          = LuckyUI.WC.success,
+    suggested_class = LuckyUI.WC.success,
+    suggested_race  = LuckyUI.WC.success,
+    rare            = LuckyUI.WC.purple,
+}
+
+CharacterMount.SourceLabel = {
+    racial          = "Racial",
+    class           = "Class",
+    manual          = "Manual",
+    suggested_class = "Suggested",
+    suggested_race  = "Suggested",
+    rare            = "Rare",
+}
 
 -- Module-level references set during ADDON_LOADED
 local db      -- CharacterMountDB[charKey] for the current character
@@ -141,6 +163,7 @@ end
 
 function CharacterMount.UnexcludeMount(mountID)
     db.exclusions[mountID] = nil
+    db.additions[mountID]  = true
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
 end
 

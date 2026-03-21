@@ -6,7 +6,6 @@ CharacterMount = CharacterMount or {}
 
 -- ---------------------------------------------------------------------------
 -- Mount Journal integration — "Add/Remove" button on the journal detail panel
--- Uses Blizzard's UIPanelButtonTemplate for visual consistency with the journal.
 -- ---------------------------------------------------------------------------
 
 function CharacterMount.HookMountJournalButton()
@@ -15,8 +14,7 @@ function CharacterMount.HookMountJournalButton()
 
     local db = CharacterMount.db
 
-    local btn = CreateFrame("Button", nil, MountJournal.MountDisplay, "UIPanelButtonTemplate")
-    btn:SetSize(160, 22)
+    local btn = LuckyUI.CreateButton(MountJournal.MountDisplay, "", 160, 22, "secondary")
     btn:SetPoint("BOTTOMLEFT", MountJournal.MountDisplay, "BOTTOMLEFT", 4, 4)
 
     local function GetSelectedMountID()
@@ -74,9 +72,8 @@ end
 -- Character Mount list window
 -- ---------------------------------------------------------------------------
 
-local S  = CharacterMount.Style
-local C  = S.C
-local WC = S.WC
+local C  = LuckyUI.C
+local WC = LuckyUI.WC
 
 local ACTIVE_POOL_SIZE = 25
 local EXCL_POOL_SIZE   = 6
@@ -105,7 +102,7 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     row.icon:SetPoint("LEFT", row, "LEFT", 4, 0)
 
     -- Action button (styled secondary)
-    row.actionBtn = S.CreateButton(row, "", 55, 22, "secondary")
+    row.actionBtn = LuckyUI.CreateButton(row, "", 55, 22, "secondary")
     row.actionBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 
     -- Callback reads row.mountID / row.isExcluded set at refresh time.
@@ -121,7 +118,7 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     -- Name label — width depends on whether a source label shares the space
     local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 62 or 0) - 59
     row.nameLabel = row:CreateFontString(nil, "OVERLAY")
-    row.nameLabel:SetFont(S.BODY_FONT, 13)
+    row.nameLabel:SetFont(LuckyUI.BODY_FONT, 13)
     row.nameLabel:SetSize(nameLabelWidth, ROW_HEIGHT)
     row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
     row.nameLabel:SetJustifyH("LEFT")
@@ -131,7 +128,7 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
 
     if hasSourceLabel then
         row.sourceLabel = row:CreateFontString(nil, "OVERLAY")
-        row.sourceLabel:SetFont(S.BODY_FONT, 11)
+        row.sourceLabel:SetFont(LuckyUI.BODY_FONT, 11)
         row.sourceLabel:SetSize(58, ROW_HEIGHT)
         row.sourceLabel:SetPoint("LEFT", row.nameLabel, "RIGHT", 4, 0)
         row.sourceLabel:SetJustifyH("LEFT")
@@ -150,14 +147,14 @@ function CharacterMount.CreateUI()
     -- -----------------------------------------------------------------------
     -- Main frame (dark panel with gold border)
     -- -----------------------------------------------------------------------
-    local frame = S.CreatePanel("CharacterMount_ListFrame", UIParent, 320, 520)
+    local frame = LuckyUI.CreatePanel("CharacterMount_ListFrame", UIParent, 320, 520)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("MEDIUM")
     frame:Hide()
     tinsert(UISpecialFrames, "CharacterMount_ListFrame")
 
     -- Header bar (gradient background, gold title, close button)
-    S.CreateHeader(frame, "Character Mounts")
+    LuckyUI.CreateHeader(frame, "Character Mounts")
 
     -- -----------------------------------------------------------------------
     -- Footer separator line
@@ -171,11 +168,11 @@ function CharacterMount.CreateUI()
     -- -----------------------------------------------------------------------
     -- Bottom bar buttons
     -- -----------------------------------------------------------------------
-    local mountBtn = S.CreateButton(frame, "Mount Now", 95, 28, "primary")
+    local mountBtn = LuckyUI.CreateButton(frame, "Mount Now", 95, 28, "primary")
     mountBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 8)
     mountBtn:SetScript("OnClick", function() CharacterMount.MountRandom() end)
 
-    local macroBtn = S.CreateButton(frame, "Macro", 75, 28, "secondary")
+    local macroBtn = LuckyUI.CreateButton(frame, "Macro", 75, 28, "secondary")
     macroBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 8)
     macroBtn:SetScript("OnClick", function() CharacterMount.CreateMacro() end)
 
@@ -195,7 +192,7 @@ function CharacterMount.CreateUI()
     -- -----------------------------------------------------------------------
     -- Divider: thin line + "Excluded" label
     -- -----------------------------------------------------------------------
-    local divider = S.CreateDivider(frame, "Excluded")
+    local divider = LuckyUI.CreateDivider(frame, "Excluded")
     divider:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, 230)
     divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 230)
     divider:Hide()
@@ -217,13 +214,24 @@ function CharacterMount.CreateUI()
 
     -- Empty-state hint (shown when active list is empty)
     local emptyHint = content:CreateFontString(nil, "OVERLAY")
-    emptyHint:SetFont(S.BODY_FONT, 13)
+    emptyHint:SetFont(LuckyUI.BODY_FONT, 13)
     emptyHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     emptyHint:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -16)
     emptyHint:SetJustifyH("LEFT")
-    emptyHint:SetText("No mounts yet.\nUse: /cmount add <name>")
+    emptyHint:SetWordWrap(true)
+    emptyHint:SetWidth(250)
+    emptyHint:SetText("No mounts yet.\nUse /cmount add <name> or add mounts from the mount journal.")
     emptyHint:Hide()
     frame.emptyHint = emptyHint
+
+    -- Open Mount Journal button (shown alongside empty hint)
+    local journalBtn = LuckyUI.CreateButton(content, "Open Mount Journal", 140, 24, "secondary")
+    journalBtn:SetPoint("TOPLEFT", emptyHint, "BOTTOMLEFT", 0, -10)
+    journalBtn:SetScript("OnClick", function()
+        ToggleCollectionsJournal(1)  -- 1 = Mount Journal tab
+    end)
+    journalBtn:Hide()
+    frame.journalBtn = journalBtn
 
     -- Pre-allocate active rows (positions are set in RefreshUI via ClearAllPoints)
     frame.activePool = {}
@@ -259,8 +267,8 @@ function CharacterMount.RefreshUI()
             row.nameLabel:SetText(entry.name)
             row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
             if row.sourceLabel then
-                local sc = S.SourceColor[entry.source] or ""
-                local sl = S.SourceLabel[entry.source]  or ""
+                local sc = CharacterMount.SourceColor[entry.source] or ""
+                local sl = CharacterMount.SourceLabel[entry.source]  or ""
                 row.sourceLabel:SetText(sc .. sl .. WC.reset)
                 row.sourceLabel:Show()
             end
@@ -277,7 +285,9 @@ function CharacterMount.RefreshUI()
     content:SetHeight(math.max(200, #activeList * (ROW_HEIGHT + ROW_GAP) + 14))
 
     -- Empty hint
-    frame.emptyHint:SetShown(#activeList == 0)
+    local isEmpty = #activeList == 0
+    frame.emptyHint:SetShown(isEmpty)
+    frame.journalBtn:SetShown(isEmpty)
 
     -- -----------------------------------------------------------------------
     -- 2. Excluded rows

@@ -4,9 +4,8 @@
 
 CharacterMount = CharacterMount or {}
 
-local S  = CharacterMount.Style
-local C  = S.C
-local WC = S.WC
+local C  = LuckyUI.C
+local WC = LuckyUI.WC
 
 local PREFIX = WC.goldAccent .. "CharMount:" .. WC.reset
 
@@ -211,7 +210,7 @@ local function CreateCheckboxRow(parent, rowWidth)
     hl:SetAllPoints()
     hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
 
-    row.check = S.CreateCheckbox(row, 18)
+    row.check = LuckyUI.CreateCheckbox(row, 18)
     row.check:SetPoint("LEFT", row, "LEFT", 0, 0)
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
@@ -219,7 +218,7 @@ local function CreateCheckboxRow(parent, rowWidth)
     row.icon:SetPoint("LEFT", row.check, "RIGHT", 4, 0)
 
     row.nameLabel = row:CreateFontString(nil, "OVERLAY")
-    row.nameLabel:SetFont(S.BODY_FONT, 13)
+    row.nameLabel:SetFont(LuckyUI.BODY_FONT, 13)
     row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
     row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -60, 0)
     row.nameLabel:SetJustifyH("LEFT")
@@ -228,7 +227,7 @@ local function CreateCheckboxRow(parent, rowWidth)
     row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
 
     row.sourceLabel = row:CreateFontString(nil, "OVERLAY")
-    row.sourceLabel:SetFont(S.BODY_FONT, 11)
+    row.sourceLabel:SetFont(LuckyUI.BODY_FONT, 11)
     row.sourceLabel:SetSize(55, ROW_HEIGHT)
     row.sourceLabel:SetPoint("RIGHT", row, "RIGHT", 0, 0)
     row.sourceLabel:SetJustifyH("RIGHT")
@@ -247,12 +246,12 @@ local function CreateCategoryHeader(parent, width)
     header:SetWidth(width)
     header:Hide()
 
-    header.check = S.CreateCheckbox(header, 18)
+    header.check = LuckyUI.CreateCheckbox(header, 18)
     header.check:SetPoint("LEFT", header, "LEFT", 0, 0)
 
     -- Section heading: Friz Quadrata, gold accent
     header.text = header:CreateFontString(nil, "OVERLAY")
-    header.text:SetFont(S.TITLE_FONT, 14)
+    header.text:SetFont(LuckyUI.TITLE_FONT, 14)
     header.text:SetTextColor(C.goldAccent[1], C.goldAccent[2], C.goldAccent[3])
     header.text:SetPoint("LEFT", header.check, "RIGHT", 6, 0)
     header.text:SetJustifyH("LEFT")
@@ -280,11 +279,11 @@ local function CreateSubGroupHeader(parent, width)
     header:SetWidth(width)
     header:Hide()
 
-    header.check = S.CreateCheckbox(header, 18)
+    header.check = LuckyUI.CreateCheckbox(header, 18)
     header.check:SetPoint("LEFT", header, "LEFT", 0, 0)
 
     header.text = header:CreateFontString(nil, "OVERLAY")
-    header.text:SetFont(S.BODY_FONT, 12)
+    header.text:SetFont(LuckyUI.BODY_FONT, 12)
     header.text:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     header.text:SetPoint("LEFT", header.check, "RIGHT", 4, 0)
     header.text:SetJustifyH("LEFT")
@@ -313,13 +312,13 @@ function CharacterMount.ShowOnboarding()
     -- -----------------------------------------------------------------------
     -- Main frame (dark panel, gold border, DIALOG strata)
     -- -----------------------------------------------------------------------
-    local frame = S.CreatePanel("CharacterMount_OnboardingFrame", UIParent, 380, 560)
+    local frame = LuckyUI.CreatePanel("CharacterMount_OnboardingFrame", UIParent, 380, 560)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     tinsert(UISpecialFrames, "CharacterMount_OnboardingFrame")
 
     -- Header
-    S.CreateHeader(frame, "Set Up Your Mounts")
+    LuckyUI.CreateHeader(frame, "Set Up Your Mounts")
 
     -- Subtitle with character name, race, class (class-coloured)
     local localRace              = UnitRace("player")
@@ -328,13 +327,13 @@ function CharacterMount.ShowOnboarding()
     local classColour = RAID_CLASS_COLORS[classFile]
     local colourHex = classColour and classColour:GenerateHexColor() or "ffffffff"
     local subtitle = frame:CreateFontString(nil, "OVERLAY")
-    subtitle:SetFont(S.BODY_FONT, 13)
+    subtitle:SetFont(LuckyUI.BODY_FONT, 13)
     subtitle:SetPoint("TOPLEFT", frame.header, "BOTTOMLEFT", 12, -8)
     subtitle:SetText("|c" .. colourHex .. playerName .. " - " .. localRace .. " " .. localClass .. WC.reset)
 
     -- Description blurb
     local blurb = frame:CreateFontString(nil, "OVERLAY")
-    blurb:SetFont(S.BODY_FONT, 11)
+    blurb:SetFont(LuckyUI.BODY_FONT, 11)
     blurb:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     blurb:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -6)
     blurb:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
@@ -375,7 +374,7 @@ function CharacterMount.ShowOnboarding()
     -- Empty state
     -- -----------------------------------------------------------------------
     local emptyHint = content:CreateFontString(nil, "OVERLAY")
-    emptyHint:SetFont(S.BODY_FONT, 13)
+    emptyHint:SetFont(LuckyUI.BODY_FONT, 13)
     emptyHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     emptyHint:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -20)
     emptyHint:SetText("No suggested mounts found for your character.")
@@ -385,20 +384,20 @@ function CharacterMount.ShowOnboarding()
     -- -----------------------------------------------------------------------
     -- Bottom bar
     -- -----------------------------------------------------------------------
-    local addBtn = S.CreateButton(frame, "Add Selected", 120, 28, "primary")
+    local addBtn = LuckyUI.CreateButton(frame, "Add Selected", 120, 28, "primary")
     addBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 10)
     addBtn:SetScript("OnClick", function()
         CharacterMount.ApplyOnboarding()
     end)
 
-    local skipBtn = S.CreateButton(frame, "Skip", 80, 28, "secondary")
+    local skipBtn = LuckyUI.CreateButton(frame, "Skip", 80, 28, "secondary")
     skipBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 10)
     skipBtn:SetScript("OnClick", function()
         CharacterMount.SkipOnboarding()
     end)
 
     -- Select All / Deselect All
-    local selectAllBtn = S.CreateButton(frame, "Select All", 90, 28, "secondary")
+    local selectAllBtn = LuckyUI.CreateButton(frame, "Select All", 90, 28, "secondary")
     selectAllBtn:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
     selectAllBtn:SetScript("OnClick", function()
         CharacterMount.ToggleAllOnboarding(true)
@@ -556,8 +555,8 @@ function CharacterMount.RefreshOnboarding()
                     row.icon:SetTexture(entry.icon)
                     row.nameLabel:SetText(entry.name)
 
-                    local sc = S.SourceColor[entry.source] or ""
-                    local sl = S.SourceLabel[entry.source]  or ""
+                    local sc = CharacterMount.SourceColor[entry.source] or ""
+                    local sl = CharacterMount.SourceLabel[entry.source]  or ""
                     row.sourceLabel:SetText(sc .. sl .. WC.reset)
 
                     row.check:SetChecked(entry.checked)
