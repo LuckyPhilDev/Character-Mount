@@ -6,6 +6,7 @@ CharacterMount = CharacterMount or {}
 
 -- ---------------------------------------------------------------------------
 -- Mount Journal integration — "Add/Remove" button on the journal detail panel
+-- Uses Blizzard's UIPanelButtonTemplate for visual consistency with the journal.
 -- ---------------------------------------------------------------------------
 
 function CharacterMount.HookMountJournalButton()
@@ -73,18 +74,9 @@ end
 -- Character Mount list window
 -- ---------------------------------------------------------------------------
 
-local SOURCE_COLOUR = {
-    racial  = "|cffadd8e6",  -- light blue
-    class   = "|cffffd700",  -- gold
-    manual  = "|cff90ee90",  -- light green
-}
-local SOURCE_LABEL = {
-    racial  = "Racial",
-    class   = "Class",
-    manual  = "Manual",
-}
-local COLOUR_RESET = "|r"
-local COLOUR_DIM   = "|cff888888"
+local S  = CharacterMount.Style
+local C  = S.C
+local WC = S.WC
 
 local ACTIVE_POOL_SIZE = 25
 local EXCL_POOL_SIZE   = 6
@@ -100,13 +92,20 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     row:SetHeight(ROW_HEIGHT)
     row:SetWidth(rowWidth)
     row:Hide()
+    row:EnableMouse(true)
 
+    -- Hover highlight (HIGHLIGHT layer auto-shows on mouse over)
+    local hl = row:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
+
+    -- Mount icon
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetSize(22, 22)
     row.icon:SetPoint("LEFT", row, "LEFT", 4, 0)
 
-    row.actionBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    row.actionBtn:SetSize(55, 22)
+    -- Action button (styled secondary)
+    row.actionBtn = S.CreateButton(row, "", 55, 22, "secondary")
     row.actionBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 
     -- Callback reads row.mountID / row.isExcluded set at refresh time.
@@ -121,15 +120,18 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
 
     -- Name label — width depends on whether a source label shares the space
     local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 62 or 0) - 59
-    row.nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.nameLabel = row:CreateFontString(nil, "OVERLAY")
+    row.nameLabel:SetFont(S.BODY_FONT, 13)
     row.nameLabel:SetSize(nameLabelWidth, ROW_HEIGHT)
     row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
     row.nameLabel:SetJustifyH("LEFT")
     row.nameLabel:SetJustifyV("MIDDLE")
     row.nameLabel:SetWordWrap(false)
+    row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
 
     if hasSourceLabel then
-        row.sourceLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        row.sourceLabel = row:CreateFontString(nil, "OVERLAY")
+        row.sourceLabel:SetFont(S.BODY_FONT, 11)
         row.sourceLabel:SetSize(58, ROW_HEIGHT)
         row.sourceLabel:SetPoint("LEFT", row.nameLabel, "RIGHT", 4, 0)
         row.sourceLabel:SetJustifyH("LEFT")
@@ -146,52 +148,44 @@ function CharacterMount.CreateUI()
     if CharacterMount.frame then return end
 
     -- -----------------------------------------------------------------------
-    -- Main frame
-    -- Frame height 520px:
-    --   22px  title bar (top)
-    --   248px active scroll frame
-    --   16px  divider band (shown only when exclusions exist)
-    --   178px excluded rows band  (6 rows × 28px + 5 × 2px gap)
-    --   8px   gap
-    --   28px  bottom bar
-    --   8px   bottom padding
+    -- Main frame (dark panel with gold border)
     -- -----------------------------------------------------------------------
-    local frame = CreateFrame("Frame", "CharacterMount_ListFrame", UIParent,
-                              "BasicFrameTemplateWithInset")
-    frame:SetSize(320, 520)
+    local frame = S.CreatePanel("CharacterMount_ListFrame", UIParent, 320, 520)
     frame:SetPoint("CENTER")
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop",  frame.StopMovingOrSizing)
+    frame:SetFrameStrata("MEDIUM")
     frame:Hide()
-    frame.TitleText:SetText("Character Mounts")
+    tinsert(UISpecialFrames, "CharacterMount_ListFrame")
+
+    -- Header bar (gradient background, gold title, close button)
+    S.CreateHeader(frame, "Character Mounts")
 
     -- -----------------------------------------------------------------------
-    -- Bottom bar (y=8 from frame bottom)
+    -- Footer separator line
     -- -----------------------------------------------------------------------
-    local mountBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    mountBtn:SetSize(95, 28)
+    local footerLine = frame:CreateTexture(nil, "ARTWORK")
+    footerLine:SetHeight(1)
+    footerLine:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 42)
+    footerLine:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 42)
+    footerLine:SetColorTexture(C.borderDark[1], C.borderDark[2], C.borderDark[3])
+
+    -- -----------------------------------------------------------------------
+    -- Bottom bar buttons
+    -- -----------------------------------------------------------------------
+    local mountBtn = S.CreateButton(frame, "Mount Now", 95, 28, "primary")
     mountBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 8)
-    mountBtn:SetText("Mount Now")
     mountBtn:SetScript("OnClick", function() CharacterMount.MountRandom() end)
 
-    local macroBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    macroBtn:SetSize(75, 28)
+    local macroBtn = S.CreateButton(frame, "Macro", 75, 28, "secondary")
     macroBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 8)
-    macroBtn:SetText("Macro")
     macroBtn:SetScript("OnClick", function() CharacterMount.CreateMacro() end)
 
     -- -----------------------------------------------------------------------
-    -- Excluded rows (fixed positions, y=44..222 from frame bottom)
-    -- Row i=1 → topmost displayed entry; i=6 → bottommost.
-    -- fromBottom(i) = 44 + (EXCL_POOL_SIZE - i) * (ROW_HEIGHT + ROW_GAP)
+    -- Excluded rows (fixed positions above footer)
     -- -----------------------------------------------------------------------
     frame.excludedPool = {}
     for i = 1, EXCL_POOL_SIZE do
         local row = CreateRow(frame, false, 290)
-        local fromBottom = 44 + (EXCL_POOL_SIZE - i) * (ROW_HEIGHT + ROW_GAP)
+        local fromBottom = 48 + (EXCL_POOL_SIZE - i) * (ROW_HEIGHT + ROW_GAP)
         row:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, fromBottom)
         row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, fromBottom)
         row:SetHeight(ROW_HEIGHT)
@@ -199,32 +193,20 @@ function CharacterMount.CreateUI()
     end
 
     -- -----------------------------------------------------------------------
-    -- Divider: thin line + "Excluded" label (y=226 from frame bottom)
+    -- Divider: thin line + "Excluded" label
     -- -----------------------------------------------------------------------
-    local divider = CreateFrame("Frame", nil, frame)
-    divider:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, 226)
-    divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 226)
-    divider:SetHeight(16)
+    local divider = S.CreateDivider(frame, "Excluded")
+    divider:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, 230)
+    divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 230)
     divider:Hide()
-
-    local divLine = divider:CreateTexture(nil, "ARTWORK")
-    divLine:SetColorTexture(0.35, 0.35, 0.35, 1)
-    divLine:SetHeight(1)
-    divLine:SetPoint("BOTTOMLEFT",  divider, "BOTTOMLEFT",  0, 4)
-    divLine:SetPoint("BOTTOMRIGHT", divider, "BOTTOMRIGHT", 0, 4)
-
-    local divLabel = divider:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    divLabel:SetPoint("BOTTOMLEFT", divider, "BOTTOMLEFT", 0, 6)
-    divLabel:SetText(COLOUR_DIM .. "Excluded" .. COLOUR_RESET)
-
     frame.divider = divider
 
     -- -----------------------------------------------------------------------
-    -- Active scroll frame (y=242..490 from frame bottom ≈ 248px tall)
+    -- Active scroll frame
     -- -----------------------------------------------------------------------
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -30)
-    scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 44)
+    scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -36)
+    scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
     frame.scrollFrame = scrollFrame
 
     local content = CreateFrame("Frame", nil, scrollFrame)
@@ -234,14 +216,12 @@ function CharacterMount.CreateUI()
     frame.content = content
 
     -- Empty-state hint (shown when active list is empty)
-    local emptyHint = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local emptyHint = content:CreateFontString(nil, "OVERLAY")
+    emptyHint:SetFont(S.BODY_FONT, 13)
+    emptyHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     emptyHint:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -16)
     emptyHint:SetJustifyH("LEFT")
-    emptyHint:SetText(
-        COLOUR_DIM ..
-        "No mounts yet.\nUse: /cmount add <name>" ..
-        COLOUR_RESET
-    )
+    emptyHint:SetText("No mounts yet.\nUse: /cmount add <name>")
     emptyHint:Hide()
     frame.emptyHint = emptyHint
 
@@ -277,10 +257,11 @@ function CharacterMount.RefreshUI()
             row.icon:SetTexture(entry.icon)
             row.icon:SetDesaturated(false)
             row.nameLabel:SetText(entry.name)
+            row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
             if row.sourceLabel then
-                local c = SOURCE_COLOUR[entry.source] or ""
-                local l = SOURCE_LABEL[entry.source]  or ""
-                row.sourceLabel:SetText(c .. l .. COLOUR_RESET)
+                local sc = S.SourceColor[entry.source] or ""
+                local sl = S.SourceLabel[entry.source]  or ""
+                row.sourceLabel:SetText(sc .. sl .. WC.reset)
                 row.sourceLabel:Show()
             end
             row.actionBtn:SetText("Remove")
@@ -311,9 +292,9 @@ function CharacterMount.RefreshUI()
     table.sort(excludedList, function(a, b) return a.name < b.name end)
 
     -- Resize scroll frame: expand to fill the frame when no excluded section is shown.
-    local scrollBottomY = (#excludedList > 0) and 242 or 44
+    local scrollBottomY = (#excludedList > 0) and 248 or 48
     frame.scrollFrame:ClearAllPoints()
-    frame.scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -30)
+    frame.scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -36)
     frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, scrollBottomY)
 
     if #excludedList > 0 then
@@ -324,7 +305,8 @@ function CharacterMount.RefreshUI()
             if item then
                 row.icon:SetTexture(item.icon)
                 row.icon:SetDesaturated(true)
-                row.nameLabel:SetText(COLOUR_DIM .. item.name .. COLOUR_RESET)
+                row.nameLabel:SetText(item.name)
+                row.nameLabel:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
                 row.actionBtn:SetText("Restore")
                 row.mountID    = item.id
                 row.isExcluded = true

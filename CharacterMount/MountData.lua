@@ -407,22 +407,22 @@ MD.SUGGESTED_MOUNTS = {
 
         -- Horde — Wind Riders
         ["Orc"]               = { 136, 140, 141, 133, 134, 135, 341, 522 },
-        ["Tauren"]            = { 136, 140, 141, 133, 134, 135 },
+        ["Tauren"]            = {},
         ["Troll"]             = { 136, 140, 133, 134, 78 },
-        ["Goblin"]            = { 136, 205, 133, 134, 275, 574 },
+        ["Goblin"]            = { 205, 275, 574 },
         -- Undead — Bats
         ["Undead"]            = { 544, 1049, 1210, 168, 1196, 1197, 2679, 2681, 2682, 2683 },
         ["BloodElf"]          = {},
         -- Allied — Horde
-        ["Nightborne"]        = { 136, 141, 133, 881, 2670 },
-        ["HighmountainTauren"]= { 136, 140, 133 },
-        ["MagharOrc"]         = { 136, 140, 141, 133, 341, 522 },
-        ["ZandalariTroll"]    = { 1043, 136, 133, 78 },
-        ["Vulpera"]           = { 136, 141, 133 },
+        ["Nightborne"]        = { 881, 2670 },
+        ["HighmountainTauren"]= {},
+        ["MagharOrc"]         = { 341, 522 },
+        ["ZandalariTroll"]    = { 1043, 78 },
+        ["Vulpera"]           = {},
 
         -- Neutral
         ["Dracthyr"]          = {},
-        ["Earthen"]           = { 132, 136, 130, 133 },
+        ["Earthen"]           = { 132, 130 },
     },
 
     class = {

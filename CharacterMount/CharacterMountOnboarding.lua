@@ -4,7 +4,11 @@
 
 CharacterMount = CharacterMount or {}
 
-local PREFIX = "|cff00cc00CharMount:|r"
+local S  = CharacterMount.Style
+local C  = S.C
+local WC = S.WC
+
+local PREFIX = WC.goldAccent .. "CharMount:" .. WC.reset
 
 -- ---------------------------------------------------------------------------
 -- Constants
@@ -12,7 +16,7 @@ local PREFIX = "|cff00cc00CharMount:|r"
 
 local ROW_HEIGHT    = 26
 local ROW_GAP       = 2
-local HEADER_HEIGHT = 20
+local HEADER_HEIGHT = 24
 local POOL_SIZE     = 60   -- pre-allocated checkbox rows
 
 local SOURCE_PRIORITY = { "class", "suggested_class", "racial", "suggested_race", "rare" }
@@ -23,22 +27,6 @@ local SOURCE_DISPLAY_ORDER = {   -- sort order within each category
     suggested_class = 4,
     rare            = 5,
 }
-local SOURCE_LABELS = {
-    class           = "Class",
-    suggested_class = "Suggested",
-    racial          = "Racial",
-    suggested_race  = "Suggested",
-    rare            = "Rare",
-}
-local SOURCE_COLOURS = {
-    class           = "|cffffd700",  -- gold
-    suggested_class = "|cff90ee90",  -- light green
-    racial          = "|cffadd8e6",  -- light blue
-    suggested_race  = "|cff90ee90",  -- light green
-    rare            = "|cffcc99ff",  -- light purple
-}
-local COLOUR_RESET = "|r"
-local COLOUR_DIM   = "|cff888888"
 
 local CATEGORY_ORDER  = { "ground", "flying", "water" }
 local CATEGORY_LABELS = {
@@ -216,23 +204,31 @@ local function CreateCheckboxRow(parent, rowWidth)
     row:SetHeight(ROW_HEIGHT)
     row:SetWidth(rowWidth)
     row:Hide()
+    row:EnableMouse(true)
 
-    row.check = CreateFrame("CheckButton", nil, row, "UICheckButtonTemplate")
-    row.check:SetSize(22, 22)
+    -- Hover highlight
+    local hl = row:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
+
+    row.check = S.CreateCheckbox(row, 18)
     row.check:SetPoint("LEFT", row, "LEFT", 0, 0)
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetSize(20, 20)
-    row.icon:SetPoint("LEFT", row.check, "RIGHT", 2, 0)
+    row.icon:SetPoint("LEFT", row.check, "RIGHT", 4, 0)
 
-    row.nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    row.nameLabel = row:CreateFontString(nil, "OVERLAY")
+    row.nameLabel:SetFont(S.BODY_FONT, 13)
     row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
     row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -60, 0)
     row.nameLabel:SetJustifyH("LEFT")
     row.nameLabel:SetJustifyV("MIDDLE")
     row.nameLabel:SetWordWrap(false)
+    row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
 
-    row.sourceLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    row.sourceLabel = row:CreateFontString(nil, "OVERLAY")
+    row.sourceLabel:SetFont(S.BODY_FONT, 11)
     row.sourceLabel:SetSize(55, ROW_HEIGHT)
     row.sourceLabel:SetPoint("RIGHT", row, "RIGHT", 0, 0)
     row.sourceLabel:SetJustifyH("RIGHT")
@@ -251,18 +247,21 @@ local function CreateCategoryHeader(parent, width)
     header:SetWidth(width)
     header:Hide()
 
-    header.check = CreateFrame("CheckButton", nil, header, "UICheckButtonTemplate")
-    header.check:SetSize(22, 22)
+    header.check = S.CreateCheckbox(header, 18)
     header.check:SetPoint("LEFT", header, "LEFT", 0, 0)
 
-    header.text = header:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    header.text:SetPoint("LEFT", header.check, "RIGHT", 2, 0)
+    -- Section heading: Friz Quadrata, gold accent
+    header.text = header:CreateFontString(nil, "OVERLAY")
+    header.text:SetFont(S.TITLE_FONT, 14)
+    header.text:SetTextColor(C.goldAccent[1], C.goldAccent[2], C.goldAccent[3])
+    header.text:SetPoint("LEFT", header.check, "RIGHT", 6, 0)
     header.text:SetJustifyH("LEFT")
 
+    -- Decorative line extending from label to right edge
     local line = header:CreateTexture(nil, "ARTWORK")
-    line:SetColorTexture(0.4, 0.4, 0.4, 0.8)
+    line:SetColorTexture(C.goldMuted[1], C.goldMuted[2], C.goldMuted[3], 0.5)
     line:SetHeight(1)
-    line:SetPoint("LEFT", header.text, "RIGHT", 6, 0)
+    line:SetPoint("LEFT", header.text, "RIGHT", 8, 0)
     line:SetPoint("RIGHT", header, "RIGHT", -4, 0)
     header.line = line
 
@@ -281,12 +280,13 @@ local function CreateSubGroupHeader(parent, width)
     header:SetWidth(width)
     header:Hide()
 
-    header.check = CreateFrame("CheckButton", nil, header, "UICheckButtonTemplate")
-    header.check:SetSize(22, 22)
+    header.check = S.CreateCheckbox(header, 18)
     header.check:SetPoint("LEFT", header, "LEFT", 0, 0)
 
-    header.text = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    header.text:SetPoint("LEFT", header.check, "RIGHT", 2, 0)
+    header.text = header:CreateFontString(nil, "OVERLAY")
+    header.text:SetFont(S.BODY_FONT, 12)
+    header.text:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+    header.text:SetPoint("LEFT", header.check, "RIGHT", 4, 0)
     header.text:SetJustifyH("LEFT")
 
     return header
@@ -311,21 +311,15 @@ function CharacterMount.ShowOnboarding()
     end
 
     -- -----------------------------------------------------------------------
-    -- Main frame
+    -- Main frame (dark panel, gold border, DIALOG strata)
     -- -----------------------------------------------------------------------
-    local frame = CreateFrame("Frame", "CharacterMount_OnboardingFrame", UIParent,
-                              "BasicFrameTemplateWithInset")
-    frame:SetSize(380, 560)
+    local frame = S.CreatePanel("CharacterMount_OnboardingFrame", UIParent, 380, 560)
     frame:SetPoint("CENTER")
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop",  frame.StopMovingOrSizing)
     frame:SetFrameStrata("DIALOG")
+    tinsert(UISpecialFrames, "CharacterMount_OnboardingFrame")
 
-    -- Title
-    frame.TitleText:SetText("Set Up Your Mounts")
+    -- Header
+    S.CreateHeader(frame, "Set Up Your Mounts")
 
     -- Subtitle with character name, race, class (class-coloured)
     local localRace              = UnitRace("player")
@@ -333,21 +327,23 @@ function CharacterMount.ShowOnboarding()
     local playerName = UnitName("player")
     local classColour = RAID_CLASS_COLORS[classFile]
     local colourHex = classColour and classColour:GenerateHexColor() or "ffffffff"
-    local subtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    subtitle:SetPoint("TOPLEFT", frame.InsetBorderTop or frame.Inset or frame, "TOPLEFT", 8, -8)
-    subtitle:SetText("|c" .. colourHex .. playerName .. " - " .. localRace .. " " .. localClass .. COLOUR_RESET)
+    local subtitle = frame:CreateFontString(nil, "OVERLAY")
+    subtitle:SetFont(S.BODY_FONT, 13)
+    subtitle:SetPoint("TOPLEFT", frame.header, "BOTTOMLEFT", 12, -8)
+    subtitle:SetText("|c" .. colourHex .. playerName .. " - " .. localRace .. " " .. localClass .. WC.reset)
 
     -- Description blurb
-    local blurb = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local blurb = frame:CreateFontString(nil, "OVERLAY")
+    blurb:SetFont(S.BODY_FONT, 11)
+    blurb:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     blurb:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -6)
     blurb:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
     blurb:SetJustifyH("LEFT")
     blurb:SetWordWrap(true)
-    blurb:SetText(COLOUR_DIM
-        .. "Choose mounts below to get your character list started. "
+    blurb:SetText(
+        "Choose mounts below to get your character list started. "
         .. "You can add or remove mounts later from the journal or "
-        .. "by opening the /cmount menu."
-        .. COLOUR_RESET)
+        .. "by opening the /cmount menu.")
 
     -- -----------------------------------------------------------------------
     -- Scroll frame
@@ -378,36 +374,32 @@ function CharacterMount.ShowOnboarding()
     -- -----------------------------------------------------------------------
     -- Empty state
     -- -----------------------------------------------------------------------
-    local emptyHint = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local emptyHint = content:CreateFontString(nil, "OVERLAY")
+    emptyHint:SetFont(S.BODY_FONT, 13)
+    emptyHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     emptyHint:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -20)
-    emptyHint:SetText(COLOUR_DIM .. "No suggested mounts found for your character." .. COLOUR_RESET)
+    emptyHint:SetText("No suggested mounts found for your character.")
     emptyHint:Hide()
     frame.emptyHint = emptyHint
 
     -- -----------------------------------------------------------------------
     -- Bottom bar
     -- -----------------------------------------------------------------------
-    local addBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    addBtn:SetSize(120, 28)
+    local addBtn = S.CreateButton(frame, "Add Selected", 120, 28, "primary")
     addBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 10)
-    addBtn:SetText("Add Selected")
     addBtn:SetScript("OnClick", function()
         CharacterMount.ApplyOnboarding()
     end)
 
-    local skipBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    skipBtn:SetSize(80, 28)
+    local skipBtn = S.CreateButton(frame, "Skip", 80, 28, "secondary")
     skipBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 10)
-    skipBtn:SetText("Skip")
     skipBtn:SetScript("OnClick", function()
         CharacterMount.SkipOnboarding()
     end)
 
     -- Select All / Deselect All
-    local selectAllBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    selectAllBtn:SetSize(90, 28)
+    local selectAllBtn = S.CreateButton(frame, "Select All", 90, 28, "secondary")
     selectAllBtn:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
-    selectAllBtn:SetText("Select All")
     selectAllBtn:SetScript("OnClick", function()
         CharacterMount.ToggleAllOnboarding(true)
     end)
@@ -472,7 +464,7 @@ function CharacterMount.RefreshOnboarding()
                 local header = headerPool[headerIdx]
                 header:ClearAllPoints()
                 header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, yOffset)
-                header.text:SetText("|cffffffff" .. CATEGORY_LABELS[cat] .. COLOUR_RESET)
+                header.text:SetText(CATEGORY_LABELS[cat])
 
                 local allChecked = true
                 for _, entry in ipairs(flatEntries) do
@@ -522,7 +514,7 @@ function CharacterMount.RefreshOnboarding()
                     local sh = subHeaderPool[subHeaderIdx]
                     sh:ClearAllPoints()
                     sh:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
-                    sh.text:SetText(COLOUR_DIM .. sg.group .. COLOUR_RESET)
+                    sh.text:SetText(sg.group)
 
                     local allChecked = true
                     for _, entry in ipairs(sg.entries) do
@@ -564,9 +556,9 @@ function CharacterMount.RefreshOnboarding()
                     row.icon:SetTexture(entry.icon)
                     row.nameLabel:SetText(entry.name)
 
-                    local sc = SOURCE_COLOURS[entry.source] or ""
-                    local sl = SOURCE_LABELS[entry.source]  or ""
-                    row.sourceLabel:SetText(sc .. sl .. COLOUR_RESET)
+                    local sc = S.SourceColor[entry.source] or ""
+                    local sl = S.SourceLabel[entry.source]  or ""
+                    row.sourceLabel:SetText(sc .. sl .. WC.reset)
 
                     row.check:SetChecked(entry.checked)
                     row.entryRef = entry
