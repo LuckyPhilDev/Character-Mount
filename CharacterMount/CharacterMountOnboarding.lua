@@ -75,9 +75,9 @@ local function BuildCandidates()
     for _, source in ipairs(SOURCE_PRIORITY) do
         for _, mountID in ipairs(pools[source]) do
             if not seen[mountID] then
-                local name, _, icon, _, _, _, _, _, _, shouldHideOnChar, isCollected =
+                local name, _, icon, _, isUsable, _, _, _, _, shouldHideOnChar, isCollected =
                     C_MountJournal.GetMountInfoByID(mountID)
-                if isCollected and name and not shouldHideOnChar then
+                if isCollected and isUsable and name and not shouldHideOnChar then
                     seen[mountID] = true
                     local preChecked = (source ~= "rare")
                     entries[#entries + 1] = {
