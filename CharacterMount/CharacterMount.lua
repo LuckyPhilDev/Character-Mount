@@ -725,14 +725,27 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
-local addonLoaded_self       = false
+local addonLoaded_self        = false
 local addonLoaded_collections = false
+local playerLoggedIn          = false
+
+--- Show onboarding once both the addon's SavedVariables and the player
+--- data are available (requires both ADDON_LOADED and PLAYER_LOGIN).
+local function TryShowOnboarding()
+    if not addonLoaded_self or not playerLoggedIn then return end
+    if db and not db.onboardingComplete then
+        print(PREFIX .. " New character detected — showing onboarding.")
+        CharacterMount.ShowOnboarding()
+    end
+end
+
 eventFrame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
         local loaded = ...
         if loaded == ADDON_NAME then
             InitDB()
             addonLoaded_self = true
+            TryShowOnboarding()
         end
         if loaded == "Blizzard_Collections" then
             CharacterMount.HookMountJournalButton()
@@ -742,6 +755,13 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
             eventFrame:UnregisterEvent("ADDON_LOADED")
         end
     elseif event == "PLAYER_LOGIN" then
+        -- PLAYER_LOGIN can fire before ADDON_LOADED in some load orders.
+        -- Ensure our saved variables are initialised before proceeding.
+        if not addonLoaded_self then
+            InitDB()
+            addonLoaded_self = true
+        end
+        playerLoggedIn = true
         CharacterMount.CreateUI()
         CharacterMount.HookMountJournalMenu()
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
@@ -752,9 +772,6 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         if addonLoaded_self and addonLoaded_collections then
             eventFrame:UnregisterEvent("ADDON_LOADED")
         end
-        -- Trigger onboarding for new characters
-        if not db.onboardingComplete then
-            CharacterMount.ShowOnboarding()
-        end
+        TryShowOnboarding()
     end
 end)

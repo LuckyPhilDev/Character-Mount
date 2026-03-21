@@ -347,7 +347,7 @@ RegisterGroup("Rams",            {25, 21, 24, 64, 94, 95, 96})
 RegisterGroup("Sabers",          {31, 337, 26, 34, 85, 87, 107, 393})
 RegisterGroup("Mechanostriders", {40, 57, 39, 58, 88, 89, 90})
 RegisterGroup("Elekks",          {147, 163, 164, 166, 165, 167})
-RegisterGroup("Wolves",          {20, 19, 14, 310, 104, 105, 106, 522})
+RegisterGroup("Wolves",          {20, 19, 14, 310, 104, 105, 106})
 RegisterGroup("Kodos",           {72, 71, 309, 103, 102, 101, 350, 351})
 RegisterGroup("Raptors",         {27, 36, 38, 97, 98, 99, 78})
 RegisterGroup("Hawkstriders",    {158, 159, 157, 152, 302, 161, 320, 213})
@@ -414,7 +414,7 @@ MD.SUGGESTED_MOUNTS = {
         ["Mechagnome"]        = { 205, 132, 130, 275, 574 },
 
         -- Horde — Wind Riders
-        ["Orc"]               = { 136, 140, 141, 133, 134, 135, 341, 522 },
+        ["Orc"]               = { 136, 140, 141, 133, 134, 135, 341 },
         ["Tauren"]            = {},
         ["Troll"]             = { 136, 140, 133, 134, 78 },
         ["Goblin"]            = { 205, 275, 574 },
@@ -424,7 +424,7 @@ MD.SUGGESTED_MOUNTS = {
         -- Allied — Horde
         ["Nightborne"]        = { 881, 2670 },
         ["HighmountainTauren"]= {},
-        ["MagharOrc"]         = { 341, 522 },
+        ["MagharOrc"]         = { 341 },
         ["ZandalariTroll"]    = { 1043, 78 },
         ["Vulpera"]           = {},
 
@@ -439,12 +439,12 @@ MD.SUGGESTED_MOUNTS = {
         ["DEATHKNIGHT"] = { 2720, 168, 219, 238, 1196, 1197, 2679, 2681, 2682, 2683 },
         ["DEMONHUNTER"] = { 2721 },
         ["DRUID"]       = { 2722, 393, 845 },
-        ["HUNTER"]      = { 2723, 522, 78, 280 },
+        ["HUNTER"]      = { 2723, 78 },
         ["MAGE"]        = { 2724, 566, 279, 285, 375, 603, 905, 2023, 2317 },
         ["MONK"]        = { 2725, 566, 523, 524, 525 },
         ["PRIEST"]      = { 2727, 279, 285, 375, 603, 905, 2023, 2317 },
         ["ROGUE"]       = { 2728, 168 },
-        ["SHAMAN"]      = { 2729, 280 },
+        ["SHAMAN"]      = { 2729 },
         ["WARRIOR"]     = { 2731, 341, 338 },
         ["EVOKER"]      = {},
     },

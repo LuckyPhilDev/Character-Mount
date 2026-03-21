@@ -183,6 +183,13 @@ function CharacterMount.CreateUI()
     macroBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 8)
     macroBtn:SetScript("OnClick", function() CharacterMount.CreateMacro() end)
 
+    local setupBtn = LuckyUI.CreateButton(frame, "Setup", 55, 28, "secondary")
+    setupBtn:SetPoint("LEFT", macroBtn, "RIGHT", 6, 0)
+    setupBtn:SetScript("OnClick", function()
+        frame:Hide()
+        CharacterMount.ResetOnboarding()
+    end)
+
     -- -----------------------------------------------------------------------
     -- Excluded rows (fixed positions above footer)
     -- -----------------------------------------------------------------------
