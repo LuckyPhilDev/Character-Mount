@@ -216,6 +216,14 @@ MD.RACIAL_MOUNTS = {
     -- -----------------------------------------------------------------------
 
     ["Dracthyr"] = {
+        1664, -- Guardian Vorquin
+        1665, -- Swift Armored Vorquin
+        1667, -- Armored Vorquin Leystrider
+        1668, -- Majestic Armored Vorquin
+        1683, -- Crimson Vorquin
+        1684, -- Sapphire Vorquin
+        1685, -- Bronze Vorquin
+        1686, -- Obsidian Vorquin
     },
 
     ["Earthen"] = {

@@ -46,7 +46,9 @@ CharacterMount.SourcePillRGB = {
 -- Travel Form (783) adapts to context: flight in flyable areas, cheetah on
 -- ground, aquatic in water — so a single entry with category "all" is correct.
 CharacterMount.FORM_SPELLS = {
-    DRUID_TRAVEL = { spellID = 783, name = "Travel Form", category = "all" },
+    DRUID_TRAVEL    = { spellID = 783,    name = "Travel Form",  category = "all" },
+    DRACTHYR_SOAR   = { spellID = 369536, name = "Soar",         category = "flying" },
+    WORGEN_RUNNING  = { spellID = 87840,  name = "Running Wild",  category = "ground" },
 }
 
 -- Reverse lookup: spellID → category (used by MountRandom for type matching)

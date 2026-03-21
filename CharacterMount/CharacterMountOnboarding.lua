@@ -69,13 +69,13 @@ local function BuildCandidates()
         rare            = MD.GetRareMountIDs(),
     }
 
-    -- Inject spell-based class forms (e.g. Druid Travel Form)
+    -- Inject spell-based class forms (e.g. Druid Travel Form, Dracthyr Soar)
+    -- Only include forms the character actually knows.
     local formEntries = {}
     for _, form in pairs(CharacterMount.FORM_SPELLS) do
-        local spellInfo = C_Spell.GetSpellInfo(form.spellID)
-        if spellInfo then
-            local isUsable = C_Spell.IsSpellUsable(form.spellID)
-            if isUsable then
+        if IsSpellKnown(form.spellID) then
+            local spellInfo = C_Spell.GetSpellInfo(form.spellID)
+            if spellInfo then
                 -- For display purposes, "all" category forms appear under
                 -- "ground" in onboarding (Travel Form's primary visual is
                 -- the cheetah).  The actual mount-selection logic knows it
