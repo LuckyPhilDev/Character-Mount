@@ -14,7 +14,7 @@ CharacterMount.SourceColor = {
     class           = LuckyUI.WC.goldAccent,
     manual          = LuckyUI.WC.success,
     suggested_class = LuckyUI.WC.success,
-    suggested_race  = LuckyUI.WC.success,
+    suggested_race  = LuckyUI.WC.info,
     rare            = LuckyUI.WC.purple,
 }
 
@@ -23,8 +23,18 @@ CharacterMount.SourceLabel = {
     class           = "Class",
     manual          = "Manual",
     suggested_class = "Suggested",
-    suggested_race  = "Suggested",
+    suggested_race  = "Racial",
     rare            = "Rare",
+}
+
+-- RGB values for pill/tag backgrounds (matched to SourceColor)
+CharacterMount.SourcePillRGB = {
+    racial          = LuckyUI.C.info,
+    class           = LuckyUI.C.goldAccent,
+    manual          = LuckyUI.C.success,
+    suggested_class = LuckyUI.C.success,
+    suggested_race  = LuckyUI.C.info,
+    rare            = LuckyUI.C.purple,
 }
 
 -- Module-level references set during ADDON_LOADED
@@ -122,13 +132,15 @@ function CharacterMount.GetEffectiveMountList()
         for _, entry in ipairs(GetClassMounts())  do addIfNew(entry) end
     end
 
-    for mountID in pairs(db.additions) do
+    for mountID, source in pairs(db.additions) do
         if not seen[mountID] and not db.exclusions[mountID] then
             local name, _, icon, _, _, _, _, _, _, _, isCollected =
                 C_MountJournal.GetMountInfoByID(mountID)
             if isCollected and name then
                 seen[mountID] = true
-                result[#result + 1] = { id = mountID, name = name, icon = icon, source = "manual" }
+                -- source is the stored origin; legacy entries store `true`
+                local srcTag = (type(source) == "string") and source or "manual"
+                result[#result + 1] = { id = mountID, name = name, icon = icon, source = srcTag }
             end
         end
     end
@@ -147,7 +159,7 @@ function CharacterMount.AddMount(mountID)
         return false
     end
     db.exclusions[mountID] = nil
-    db.additions[mountID]  = true
+    db.additions[mountID]  = "manual"
     print(PREFIX .. " Added " .. name .. " to your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     return true
@@ -163,7 +175,7 @@ end
 
 function CharacterMount.UnexcludeMount(mountID)
     db.exclusions[mountID] = nil
-    db.additions[mountID]  = true
+    db.additions[mountID]  = "manual"
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
 end
 

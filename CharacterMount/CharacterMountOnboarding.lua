@@ -220,17 +220,24 @@ local function CreateCheckboxRow(parent, rowWidth)
     row.nameLabel = row:CreateFontString(nil, "OVERLAY")
     row.nameLabel:SetFont(LuckyUI.BODY_FONT, 13)
     row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
-    row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -60, 0)
+    row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -70, 0)
     row.nameLabel:SetJustifyH("LEFT")
     row.nameLabel:SetJustifyV("MIDDLE")
     row.nameLabel:SetWordWrap(false)
     row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
 
-    row.sourceLabel = row:CreateFontString(nil, "OVERLAY")
-    row.sourceLabel:SetFont(LuckyUI.BODY_FONT, 11)
-    row.sourceLabel:SetSize(55, ROW_HEIGHT)
-    row.sourceLabel:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-    row.sourceLabel:SetJustifyH("RIGHT")
+    -- Source pill (colored tag)
+    row.pill = CreateFrame("Frame", nil, row)
+    row.pill:SetHeight(16)
+    row.pill:SetPoint("RIGHT", row, "RIGHT", -2, 0)
+    row.pillBg = row.pill:CreateTexture(nil, "BACKGROUND")
+    row.pillBg:SetAllPoints()
+    row.pillBg:SetColorTexture(1, 1, 1, 0.15)
+
+    row.sourceLabel = row.pill:CreateFontString(nil, "OVERLAY")
+    row.sourceLabel:SetFont(LuckyUI.BODY_FONT, 10)
+    row.sourceLabel:SetPoint("CENTER", 0, 0)
+    row.sourceLabel:SetJustifyH("CENTER")
     row.sourceLabel:SetJustifyV("MIDDLE")
 
     return row
@@ -352,7 +359,7 @@ function CharacterMount.ShowOnboarding()
     scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
 
     local content = CreateFrame("Frame", nil, scrollFrame)
-    content:SetWidth(320)
+    content:SetWidth(340)
     content:SetHeight(100)  -- resized during refresh
     scrollFrame:SetScrollChild(content)
     frame.content = content
@@ -361,13 +368,13 @@ function CharacterMount.ShowOnboarding()
     -- Pre-allocate pools
     -- -----------------------------------------------------------------------
     for i = 1, POOL_SIZE do
-        rowPool[i] = CreateCheckboxRow(content, 320)
+        rowPool[i] = CreateCheckboxRow(content, 340)
     end
     for i = 1, HEADER_POOL_SIZE do
-        headerPool[i] = CreateCategoryHeader(content, 320)
+        headerPool[i] = CreateCategoryHeader(content, 340)
     end
     for i = 1, SUBHEADER_POOL_SIZE do
-        subHeaderPool[i] = CreateSubGroupHeader(content, 320)
+        subHeaderPool[i] = CreateSubGroupHeader(content, 340)
     end
 
     -- -----------------------------------------------------------------------
@@ -390,15 +397,15 @@ function CharacterMount.ShowOnboarding()
         CharacterMount.ApplyOnboarding()
     end)
 
-    local skipBtn = LuckyUI.CreateButton(frame, "Skip", 80, 28, "secondary")
-    skipBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 10)
+    local skipBtn = LuckyUI.CreateButton(frame, "Skip", 60, 22, "secondary")
+    skipBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 13)
     skipBtn:SetScript("OnClick", function()
         CharacterMount.SkipOnboarding()
     end)
 
     -- Select All / Deselect All
-    local selectAllBtn = LuckyUI.CreateButton(frame, "Select All", 90, 28, "secondary")
-    selectAllBtn:SetPoint("BOTTOM", frame, "BOTTOM", 0, 10)
+    local selectAllBtn = LuckyUI.CreateButton(frame, "Select All", 75, 22, "secondary")
+    selectAllBtn:SetPoint("BOTTOM", frame, "BOTTOM", 0, 13)
     selectAllBtn:SetScript("OnClick", function()
         CharacterMount.ToggleAllOnboarding(true)
     end)
@@ -512,7 +519,7 @@ function CharacterMount.RefreshOnboarding()
                 if sg.group and #sg.entries > 1 and subHeaderIdx <= SUBHEADER_POOL_SIZE then
                     local sh = subHeaderPool[subHeaderIdx]
                     sh:ClearAllPoints()
-                    sh:SetPoint("TOPLEFT", content, "TOPLEFT", 20, yOffset)
+                    sh:SetPoint("TOPLEFT", content, "TOPLEFT", 0, yOffset)
                     sh.text:SetText(sg.group)
 
                     local allChecked = true
@@ -550,14 +557,21 @@ function CharacterMount.RefreshOnboarding()
                     local row = rowPool[rowIdx]
                     row:ClearAllPoints()
                     row:SetPoint("TOPLEFT", content, "TOPLEFT", indent, yOffset)
-                    row:SetWidth(320 - indent)
+                    row:SetWidth(340 - indent)
 
                     row.icon:SetTexture(entry.icon)
                     row.nameLabel:SetText(entry.name)
 
-                    local sc = CharacterMount.SourceColor[entry.source] or ""
-                    local sl = CharacterMount.SourceLabel[entry.source]  or ""
-                    row.sourceLabel:SetText(sc .. sl .. WC.reset)
+                    local sl = CharacterMount.SourceLabel[entry.source] or ""
+                    local rgb = CharacterMount.SourcePillRGB[entry.source]
+                    row.sourceLabel:SetText(sl)
+                    if rgb then
+                        row.sourceLabel:SetTextColor(rgb[1], rgb[2], rgb[3])
+                        row.pillBg:SetColorTexture(rgb[1], rgb[2], rgb[3], 0.15)
+                    end
+                    local tw = row.sourceLabel:GetStringWidth()
+                    row.pill:SetWidth(math.max(tw + 12, 30))
+                    row.pill:Show()
 
                     row.check:SetChecked(entry.checked)
                     row.entryRef = entry
@@ -615,7 +629,7 @@ function CharacterMount.ApplyOnboarding()
         if entry.checked then
             -- Silently add without printing per-mount messages
             CharacterMount.db.exclusions[entry.id] = nil
-            CharacterMount.db.additions[entry.id]  = true
+            CharacterMount.db.additions[entry.id]  = entry.source
             count = count + 1
         end
     end

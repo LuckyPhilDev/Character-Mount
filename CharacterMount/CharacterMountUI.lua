@@ -102,7 +102,8 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     row.icon:SetPoint("LEFT", row, "LEFT", 4, 0)
 
     -- Action button (styled secondary)
-    row.actionBtn = LuckyUI.CreateButton(row, "", 55, 22, "secondary")
+    local btnWidth = hasSourceLabel and 24 or 55
+    row.actionBtn = LuckyUI.CreateButton(row, "", btnWidth, 22, "secondary")
     row.actionBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 
     -- Callback reads row.mountID / row.isExcluded set at refresh time.
@@ -116,7 +117,7 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     end)
 
     -- Name label — width depends on whether a source label shares the space
-    local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 62 or 0) - 59
+    local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 72 or 0) - 30
     row.nameLabel = row:CreateFontString(nil, "OVERLAY")
     row.nameLabel:SetFont(LuckyUI.BODY_FONT, 13)
     row.nameLabel:SetSize(nameLabelWidth, ROW_HEIGHT)
@@ -127,11 +128,17 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
 
     if hasSourceLabel then
-        row.sourceLabel = row:CreateFontString(nil, "OVERLAY")
-        row.sourceLabel:SetFont(LuckyUI.BODY_FONT, 11)
-        row.sourceLabel:SetSize(58, ROW_HEIGHT)
-        row.sourceLabel:SetPoint("LEFT", row.nameLabel, "RIGHT", 4, 0)
-        row.sourceLabel:SetJustifyH("LEFT")
+        row.pill = CreateFrame("Frame", nil, row)
+        row.pill:SetHeight(16)
+        row.pill:SetPoint("RIGHT", row.actionBtn, "LEFT", -4, 0)
+        row.pillBg = row.pill:CreateTexture(nil, "BACKGROUND")
+        row.pillBg:SetAllPoints()
+        row.pillBg:SetColorTexture(1, 1, 1, 0.15)
+
+        row.sourceLabel = row.pill:CreateFontString(nil, "OVERLAY")
+        row.sourceLabel:SetFont(LuckyUI.BODY_FONT, 10)
+        row.sourceLabel:SetPoint("CENTER", 0, 0)
+        row.sourceLabel:SetJustifyH("CENTER")
         row.sourceLabel:SetJustifyV("MIDDLE")
     end
 
@@ -172,7 +179,7 @@ function CharacterMount.CreateUI()
     mountBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 8)
     mountBtn:SetScript("OnClick", function() CharacterMount.MountRandom() end)
 
-    local macroBtn = LuckyUI.CreateButton(frame, "Macro", 75, 28, "secondary")
+    local macroBtn = LuckyUI.CreateButton(frame, "Create Macro", 100, 28, "secondary")
     macroBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 8)
     macroBtn:SetScript("OnClick", function() CharacterMount.CreateMacro() end)
 
@@ -267,12 +274,18 @@ function CharacterMount.RefreshUI()
             row.nameLabel:SetText(entry.name)
             row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
             if row.sourceLabel then
-                local sc = CharacterMount.SourceColor[entry.source] or ""
-                local sl = CharacterMount.SourceLabel[entry.source]  or ""
-                row.sourceLabel:SetText(sc .. sl .. WC.reset)
-                row.sourceLabel:Show()
+                local sl = CharacterMount.SourceLabel[entry.source] or ""
+                local rgb = CharacterMount.SourcePillRGB[entry.source]
+                row.sourceLabel:SetText(sl)
+                if rgb then
+                    row.sourceLabel:SetTextColor(rgb[1], rgb[2], rgb[3])
+                    row.pillBg:SetColorTexture(rgb[1], rgb[2], rgb[3], 0.15)
+                end
+                local tw = row.sourceLabel:GetStringWidth()
+                row.pill:SetWidth(math.max(tw + 12, 30))
+                row.pill:Show()
             end
-            row.actionBtn:SetText("Remove")
+            row.actionBtn:SetText("\195\151")
             row.mountID    = entry.id
             row.isExcluded = false
             row:Show()
