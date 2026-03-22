@@ -2,7 +2,7 @@
 
 CharacterMount = CharacterMount or {}
 
-local ADDON_NAME = "CharacterMount"
+local ADDON_NAME = "Luckys_Character_Mount"
 local PREFIX     = LuckyUI.WC.goldAccent .. "CharMount:" .. LuckyUI.WC.reset
 
 -- ---------------------------------------------------------------------------
@@ -742,8 +742,14 @@ local playerLoggedIn          = false
 local function TryShowOnboarding()
     if not addonLoaded_self or not playerLoggedIn then return end
     if db and not db.onboardingComplete then
-        print(PREFIX .. " New character detected — showing onboarding.")
-        CharacterMount.ShowOnboarding()
+        -- Defer slightly so the game UI is fully initialised before
+        -- we create and show the onboarding dialog.
+        C_Timer.After(0.5, function()
+            if db and not db.onboardingComplete then
+                devLog("Showing onboarding (deferred).")
+                CharacterMount.ShowOnboarding()
+            end
+        end)
     end
 end
 

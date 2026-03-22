@@ -256,7 +256,7 @@ function CharacterMount.CreateUI()
     -- Pre-allocate active rows (positions are set in RefreshUI via ClearAllPoints)
     frame.activePool = {}
     for i = 1, ACTIVE_POOL_SIZE do
-        frame.activePool[i] = CreateRow(content, true, 330)
+        frame.activePool[i] = CreateRow(content, true, 322)
     end
 
     CharacterMount.frame = frame
