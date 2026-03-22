@@ -2,6 +2,19 @@
 
 All notable changes to Character Mount will be documented in this file.
 
+## [1.1.0] - 2026-03-22
+
+### Added
+- Settings panel — accessible via ESC > Options > AddOns, or `/cmount settings`
+- Debug mode toggle in settings (account-wide) — prints mount selection diagnostics to chat
+- Mount list view in settings with remove buttons and source tags
+- Open Mount Journal button in both the mount list UI and settings panel
+- Debug logging migrated to shared LuckyLog utility from Luckys_Utils
+
+### Changed
+- Mount list dialog widened to better accommodate buttons and mount names
+- `/cmount debug` now shows saved state (debug logging is controlled via settings)
+
 ## [1.0.0] - 2026-03-21
 
 ### Added
