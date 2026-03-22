@@ -191,16 +191,12 @@ function CharacterMount.InitSettings()
     end)
 
     -- Register with the modern Settings API
-    local category = Settings.RegisterCanvasLayoutCategory(canvas, "Lucky's Character Mount")
-    Settings.RegisterAddOnCategory(category)
-    CharacterMount.settingsCategory = category
+    CharacterMount.settingsCategory = LuckySettings:Register(canvas, "Lucky's Character Mount")
 end
 
 -- ---------------------------------------------------------------------------
 -- Open the settings panel programmatically
 -- ---------------------------------------------------------------------------
 function CharacterMount.OpenSettings()
-    if CharacterMount.settingsCategory then
-        Settings.OpenToCategory(CharacterMount.settingsCategory:GetID())
-    end
+    LuckySettings:Open(CharacterMount.settingsCategory)
 end
