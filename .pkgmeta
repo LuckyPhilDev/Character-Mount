@@ -1,11 +1,10 @@
 package-as: Luckys_Character_Mount
 
 externals:
-  Luckys_Character_Mount/LuckyUtils: https://github.com/LuckyPhilDev/LuckyUtils
+  Luckys_Character_Mount/Luckys_Utils: https://github.com/LuckyPhilDev/LuckyUtils
 
 move-folders:
   Luckys_Character_Mount/Luckys_Character_Mount: Luckys_Character_Mount
-  Luckys_Character_Mount/LuckyUtils/Luckys_Utils: Luckys_Character_Mount/Luckys_Utils
 
 manual-changelog:
   filename: CHANGELOG.md
