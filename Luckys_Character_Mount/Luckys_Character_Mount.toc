@@ -12,6 +12,7 @@ MountHelpers.lua
 MountData.lua
 CharacterMount.lua
 CharacterMountUI.lua
+CharacterMountSettings.lua
 CharacterMountOnboarding.lua
 
 ## X-Curse-Project-ID: 1492089

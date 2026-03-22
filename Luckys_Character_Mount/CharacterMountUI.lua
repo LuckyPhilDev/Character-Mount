@@ -154,7 +154,7 @@ function CharacterMount.CreateUI()
     -- -----------------------------------------------------------------------
     -- Main frame (dark panel with gold border)
     -- -----------------------------------------------------------------------
-    local frame = LuckyUI.CreatePanel("CharacterMount_ListFrame", UIParent, 320, 520)
+    local frame = LuckyUI.CreatePanel("CharacterMount_ListFrame", UIParent, 360, 520)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("MEDIUM")
     frame:Hide()
@@ -190,12 +190,18 @@ function CharacterMount.CreateUI()
         CharacterMount.ResetOnboarding()
     end)
 
+    local journalOpenBtn = LuckyUI.CreateButton(frame, "Journal", 55, 28, "secondary")
+    journalOpenBtn:SetPoint("RIGHT", mountBtn, "LEFT", -6, 0)
+    journalOpenBtn:SetScript("OnClick", function()
+        ToggleCollectionsJournal(1)  -- 1 = Mount Journal tab
+    end)
+
     -- -----------------------------------------------------------------------
     -- Excluded rows (fixed positions above footer)
     -- -----------------------------------------------------------------------
     frame.excludedPool = {}
     for i = 1, EXCL_POOL_SIZE do
-        local row = CreateRow(frame, false, 290)
+        local row = CreateRow(frame, false, 330)
         local fromBottom = 48 + (EXCL_POOL_SIZE - i) * (ROW_HEIGHT + ROW_GAP)
         row:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, fromBottom)
         row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, fromBottom)
@@ -221,7 +227,7 @@ function CharacterMount.CreateUI()
     frame.scrollFrame = scrollFrame
 
     local content = CreateFrame("Frame", nil, scrollFrame)
-    content:SetWidth(270)
+    content:SetWidth(330)
     content:SetHeight(250)
     scrollFrame:SetScrollChild(content)
     frame.content = content
@@ -250,7 +256,7 @@ function CharacterMount.CreateUI()
     -- Pre-allocate active rows (positions are set in RefreshUI via ClearAllPoints)
     frame.activePool = {}
     for i = 1, ACTIVE_POOL_SIZE do
-        frame.activePool[i] = CreateRow(content, true, 270)
+        frame.activePool[i] = CreateRow(content, true, 330)
     end
 
     CharacterMount.frame = frame

@@ -61,6 +61,11 @@ end
 local db      -- CharacterMountDB[charKey] for the current character
 local charKey -- "CharName-RealmName"
 
+-- Debug logging — only prints when debugMode is true (account-wide setting)
+local devLog = LuckyLog:New(PREFIX, function()
+    return CharacterMountDB and CharacterMountDB.debugMode
+end)
+
 -- ---------------------------------------------------------------------------
 -- Saved variable helpers
 -- ---------------------------------------------------------------------------
@@ -103,14 +108,14 @@ end
 
 local function GetRacialMounts()
     local localRace, englishRace = UnitRace("player")
-    print(PREFIX .. " [DEBUG] UnitRace: localized='" .. tostring(localRace) .. "' english='" .. tostring(englishRace) .. "'")
+    devLog("[DEBUG] UnitRace: localized='" .. tostring(localRace) .. "' english='" .. tostring(englishRace) .. "'")
     local ids = CharacterMount.MountData.GetRacialMountIDs(englishRace)
-    print(PREFIX .. " [DEBUG] Racial mount IDs found for '" .. tostring(englishRace) .. "': " .. #ids)
+    devLog("[DEBUG] Racial mount IDs found for '" .. tostring(englishRace) .. "': " .. #ids)
     local result = {}
     for _, mountID in ipairs(ids) do
         local name, _, icon, _, _, _, _, _, _, _, isCollected =
             C_MountJournal.GetMountInfoByID(mountID)
-        print(PREFIX .. " [DEBUG] Mount ID " .. mountID .. ": name='" .. tostring(name) .. "' isCollected=" .. tostring(isCollected))
+        devLog("[DEBUG] Mount ID " .. mountID .. ": name='" .. tostring(name) .. "' isCollected=" .. tostring(isCollected))
         if isCollected and name then
             result[#result + 1] = { id = mountID, name = name, icon = icon, source = "racial" }
         end
@@ -153,17 +158,17 @@ function CharacterMount.GetEffectiveMountList()
     end
 
     for key, source in pairs(db.additions) do
-        print(PREFIX .. " [LIST] Processing addition key=" .. tostring(key)
+        devLog("[LIST] Processing addition key=" .. tostring(key)
             .. " (type=" .. type(key) .. ") source=" .. tostring(source)
             .. " seen=" .. tostring(seen[key])
             .. " excluded=" .. tostring(db.exclusions[key]))
         if not seen[key] and not db.exclusions[key] then
             -- Check for spell-based form entries (keyed as "spell:<id>")
             local spellID = type(key) == "string" and tonumber(key:match("^spell:(%d+)$"))
-            print(PREFIX .. " [LIST] Parsed spellID=" .. tostring(spellID))
+            devLog("[LIST] Parsed spellID=" .. tostring(spellID))
             if spellID then
                 local spellInfo = C_Spell.GetSpellInfo(spellID)
-                print(PREFIX .. " [LIST] C_Spell.GetSpellInfo(" .. spellID .. ") → "
+                devLog("[LIST] C_Spell.GetSpellInfo(" .. spellID .. ") → "
                     .. tostring(spellInfo and spellInfo.name or "nil"))
                 if spellInfo then
                     seen[key] = true
@@ -237,10 +242,10 @@ end
 -- ---------------------------------------------------------------------------
 
 function CharacterMount.MountRandom()
-    print(PREFIX .. " MountRandom called.")
+    devLog("MountRandom called.")
 
-    -- ── State diagnostics ──
-    print(PREFIX .. " [STATE] IsMounted=" .. tostring(IsMounted())
+    -- State diagnostics
+    devLog("[STATE] IsMounted=" .. tostring(IsMounted())
         .. " IsFlying=" .. tostring(IsFlying())
         .. " InCombat=" .. tostring(InCombatLockdown())
         .. " IsIndoors=" .. tostring(IsIndoors())
@@ -249,14 +254,14 @@ function CharacterMount.MountRandom()
 
     local _, playerClass = UnitClass("player")
     local formIndex = GetShapeshiftFormID()
-    print(PREFIX .. " [STATE] Class=" .. tostring(playerClass)
+    devLog("[STATE] Class=" .. tostring(playerClass)
         .. " ShapeshiftFormID=" .. tostring(formIndex))
 
     if IsMounted() then
         if IsFlying() then
             print(PREFIX .. " Flying — cannot dismount.")
         else
-            print(PREFIX .. " Dismounting.")
+            devLog("Dismounting.")
             Dismount()
         end
         return
@@ -266,7 +271,7 @@ function CharacterMount.MountRandom()
     -- when the player clicks the mount button again.
     if formIndex and formIndex > 0 then
         if playerClass == "DRUID" then
-            print(PREFIX .. " Cancelling shapeshift form (formID=" .. formIndex .. ").")
+            devLog("Cancelling shapeshift form (formID=" .. formIndex .. ").")
             CancelShapeshiftForm()
             return
         end
@@ -293,33 +298,33 @@ function CharacterMount.MountRandom()
     end
 
     local category = CharacterMount_GetEligibleMountCategory()
-    print(PREFIX .. " Eligible category: " .. category)
+    devLog("Eligible category: " .. category)
 
     local mountList = CharacterMount.GetEffectiveMountList()
-    print(PREFIX .. " Effective list: " .. #mountList .. " mounts.")
+    devLog("Effective list: " .. #mountList .. " mounts.")
 
-    -- ── Dump the full effective list for diagnostics ──
+    -- Dump the full effective list for diagnostics
     for i, entry in ipairs(mountList) do
-        print(PREFIX .. "   [" .. i .. "] id=" .. tostring(entry.id)
+        devLog("  [" .. i .. "] id=" .. tostring(entry.id)
             .. " name=" .. tostring(entry.name)
             .. " spellID=" .. tostring(entry.spellID)
             .. " source=" .. tostring(entry.source))
     end
 
-    -- ── Dump saved variables state ──
-    print(PREFIX .. " [DB] onboardingComplete=" .. tostring(db.onboardingComplete))
+    -- Dump saved variables state
+    devLog("[DB] onboardingComplete=" .. tostring(db.onboardingComplete))
     local addCount, exclCount = 0, 0
     for k, v in pairs(db.additions) do
         addCount = addCount + 1
-        print(PREFIX .. "   [DB.additions] key=" .. tostring(k)
+        devLog("  [DB.additions] key=" .. tostring(k)
             .. " (type=" .. type(k) .. ") value=" .. tostring(v))
     end
     for k, v in pairs(db.exclusions) do
         exclCount = exclCount + 1
-        print(PREFIX .. "   [DB.exclusions] key=" .. tostring(k)
+        devLog("  [DB.exclusions] key=" .. tostring(k)
             .. " (type=" .. type(k) .. ") value=" .. tostring(v))
     end
-    print(PREFIX .. " [DB] additions=" .. addCount .. " exclusions=" .. exclCount)
+    devLog("[DB] additions=" .. addCount .. " exclusions=" .. exclCount)
 
     -- MountRandom only handles journal mounts.  Spell forms (Travel Form etc.)
     -- are cast via /cast in the macro text — see PreRoll().
@@ -328,18 +333,18 @@ function CharacterMount.MountRandom()
     for _, entry in ipairs(mountList) do
         if not entry.spellID then
             local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
-            print(PREFIX .. " [MOUNT CHECK] id=" .. tostring(entry.id)
+            devLog("[MOUNT CHECK] id=" .. tostring(entry.id)
                 .. " name=" .. tostring(entry.name)
                 .. " isUsable=" .. tostring(isUsable))
             if isUsable then
                 usable[#usable + 1] = entry
             end
         else
-            print(PREFIX .. " [SKIP SPELL] " .. tostring(entry.name)
+            devLog("[SKIP SPELL] " .. tostring(entry.name)
                 .. " (handled by macro /cast)")
         end
     end
-    print(PREFIX .. " Usable journal mounts: " .. #usable)
+    devLog("Usable journal mounts: " .. #usable)
 
     -- Filter usable mounts by the eligible category
     if #usable > 0 and category ~= CharacterMount_MOUNT_TYPE.NONE then
@@ -348,7 +353,7 @@ function CharacterMount.MountRandom()
             local _, _, _, _, mountTypeID, _, _, _, _, isSteadyFlight =
                 C_MountJournal.GetMountInfoExtraByID(entry.id)
             local isMatch = CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight)
-            print(PREFIX .. " [CAT MATCH] mountID=" .. tostring(entry.id)
+            devLog("[CAT MATCH] mountID=" .. tostring(entry.id)
                 .. " typeID=" .. tostring(mountTypeID)
                 .. " steadyFlight=" .. tostring(isSteadyFlight)
                 .. " match=" .. tostring(isMatch))
@@ -356,24 +361,24 @@ function CharacterMount.MountRandom()
                 preferred[#preferred + 1] = entry
             end
         end
-        print(PREFIX .. " Matching '" .. category .. "': " .. #preferred)
+        devLog("Matching '" .. category .. "': " .. #preferred)
 
         local pool = #preferred > 0 and preferred or usable
         local pick = pool[math.random(#pool)]
-        print(PREFIX .. " Picked from pool of " .. #pool .. ": " .. pick.name)
+        devLog("Picked from pool of " .. #pool .. ": " .. pick.name)
         C_MountJournal.SummonByID(pick.id)
         return
     end
 
     if #usable > 0 then
         local pick = usable[math.random(#usable)]
-        print(PREFIX .. " Picked (no category filter): " .. pick.name)
+        devLog("Picked (no category filter): " .. pick.name)
         C_MountJournal.SummonByID(pick.id)
         return
     end
 
     -- Effective list is empty or nothing usable — fall back to full collection.
-    print(PREFIX .. " No list mounts usable, falling back to full collection.")
+    devLog("No list mounts usable, falling back to full collection.")
     local allIDs = C_MountJournal.GetMountIDs()
     if allIDs then
         local collected = {}
@@ -396,7 +401,7 @@ function CharacterMount.MountRandom()
         if #pool > 0 then
             local pick = pool[math.random(#pool)]
             local name = C_MountJournal.GetMountInfoByID(pick)
-            print(PREFIX .. " Summoning: " .. tostring(name))
+            devLog("Summoning: " .. tostring(name))
             C_MountJournal.SummonByID(pick)
             return
         end
@@ -483,17 +488,17 @@ function CharacterMount.PreRoll()
 
     local pool = #preferred > 0 and preferred or usable
     if #pool == 0 then
-        print(PREFIX .. " [ROLL] No usable mounts for next click.")
+        devLog("[ROLL] No usable mounts for next click.")
         return
     end
 
     local pick = pool[math.random(#pool)]
     local body
     if pick.spellID then
-        print(PREFIX .. " [ROLL] Next click → spell: " .. pick.name)
+        devLog("[ROLL] Next click → spell: " .. pick.name)
         body = CharacterMount.BuildMacroBody(pick.name)
     else
-        print(PREFIX .. " [ROLL] Next click → mount: " .. pick.name)
+        devLog("[ROLL] Next click → mount: " .. pick.name)
         body = CharacterMount.BuildMacroBody(nil)
     end
 
@@ -676,6 +681,8 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
                 end
             end
         end
+    elseif lower == "settings" or lower == "config" or lower == "options" then
+        CharacterMount.OpenSettings()
     elseif lower == "debug" then
         print(PREFIX .. " --- Debug for " .. tostring(charKey) .. " ---")
         if not db then
@@ -711,6 +718,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         print("  /cmount remove <name|id>")
         print("  /cmount macro        — create action bar macro")
         print("  /cmount mount        — mount now")
+        print("  /cmount settings         — open settings panel")
         print("  /cmount reset            — clear all exclusions")
         print("  /cmount reset all        — clear exclusions and manual additions")
         print("  /cmount reset onboarding — reset and re-trigger onboarding")
@@ -763,6 +771,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         end
         playerLoggedIn = true
         CharacterMount.CreateUI()
+        CharacterMount.InitSettings()
         CharacterMount.HookMountJournalMenu()
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         if C_AddOns.IsAddOnLoaded("Blizzard_Collections") then
