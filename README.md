@@ -11,6 +11,7 @@
 - **Mount Journal integration** — Add and remove mounts from the list from the mount journal.
 - **Source tags** — colour-coded pills show each mount's origin: Racial, Class, Manual, Suggested, or Rare.
 - **Excluded mounts** — removed mounts appear in an "Excluded" section with a one-click restore.
+- **Minimap button** — left-click to open the mount list, right-click for settings, middle-click to toggle dev mode. Shift-drag to reposition.
 - **Settings panel** — configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`.
 - **Debug mode** — account-wide toggle to print mount selection diagnostics to chat.
 - **Open Mount Journal** — quick-access button in both the mount list and settings panel.

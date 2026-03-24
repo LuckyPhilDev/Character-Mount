@@ -609,6 +609,48 @@ local function FindMountsByName(partialName)
 end
 
 -- ---------------------------------------------------------------------------
+-- Minimap button
+-- ---------------------------------------------------------------------------
+
+function CharacterMount.InitMinimapButton()
+    if not LuckyMinimap then return end
+
+    CharacterMount.minimapButton = LuckyMinimap:Create({
+        name    = "CharacterMountMinimapButton",
+        icon    = MACRO_ICON,
+        dbKey   = "minimap",
+        db      = CharacterMountDB,
+        onClick = function(_, mouseBtn)
+            if mouseBtn == "MiddleButton" then
+                CharacterMountDB.debugMode = not CharacterMountDB.debugMode
+                local state = CharacterMountDB.debugMode and "ON" or "OFF"
+                print(PREFIX .. " Dev mode: " .. state)
+            elseif mouseBtn == "RightButton" then
+                CharacterMount.OpenSettings()
+            else
+                CharacterMount.CreateUI()
+                if CharacterMount.frame then
+                    if CharacterMount.frame:IsShown() then
+                        CharacterMount.frame:Hide()
+                    else
+                        CharacterMount.frame:Show()
+                        CharacterMount.RefreshUI()
+                    end
+                end
+            end
+        end,
+        tooltip = function(tt)
+            tt:AddLine("Lucky's Character Mount")
+            tt:AddLine(" ")
+            tt:AddLine("Left-click: Open mount list", 0.9, 0.8, 0.5)
+            tt:AddLine("Right-click: Open settings", 0.9, 0.8, 0.5)
+            tt:AddLine("Middle-click: Toggle dev mode", 0.9, 0.8, 0.5)
+            tt:AddLine("Shift-drag: Move button", 0.54, 0.49, 0.41)
+        end,
+    })
+end
+
+-- ---------------------------------------------------------------------------
 -- Slash commands
 -- ---------------------------------------------------------------------------
 
@@ -778,6 +820,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         playerLoggedIn = true
         CharacterMount.CreateUI()
         CharacterMount.InitSettings()
+        CharacterMount.InitMinimapButton()
         CharacterMount.HookMountJournalMenu()
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         if C_AddOns.IsAddOnLoaded("Blizzard_Collections") then

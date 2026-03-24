@@ -75,7 +75,7 @@ end
 local C  = LuckyUI.C
 local WC = LuckyUI.WC
 
-local ACTIVE_POOL_SIZE = 25
+local INITIAL_ACTIVE_POOL = 20
 local EXCL_POOL_SIZE   = 6
 local ROW_HEIGHT       = 28
 local ROW_GAP          = 2
@@ -255,7 +255,7 @@ function CharacterMount.CreateUI()
 
     -- Pre-allocate active rows (positions are set in RefreshUI via ClearAllPoints)
     frame.activePool = {}
-    for i = 1, ACTIVE_POOL_SIZE do
+    for i = 1, INITIAL_ACTIVE_POOL do
         frame.activePool[i] = CreateRow(content, true, 322)
     end
 
@@ -273,9 +273,13 @@ function CharacterMount.RefreshUI()
     local activeList = CharacterMount.GetEffectiveMountList()
 
     -- -----------------------------------------------------------------------
-    -- 1. Active rows
+    -- 1. Active rows (pool grows dynamically if the list exceeds capacity)
     -- -----------------------------------------------------------------------
-    for i = 1, ACTIVE_POOL_SIZE do
+    while #frame.activePool < #activeList do
+        frame.activePool[#frame.activePool + 1] = CreateRow(frame.content, true, 322)
+    end
+
+    for i = 1, #frame.activePool do
         local row   = frame.activePool[i]
         local entry = activeList[i]
         if entry then

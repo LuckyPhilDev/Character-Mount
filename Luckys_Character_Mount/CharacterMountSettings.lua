@@ -8,7 +8,7 @@ local C  = LuckyUI.C
 
 local ROW_HEIGHT = 26
 local ROW_GAP    = 2
-local POOL_SIZE  = 50
+local INITIAL_POOL = 20
 
 -- ---------------------------------------------------------------------------
 -- Create one mount-list row inside the settings scroll content
@@ -142,7 +142,7 @@ function CharacterMount.InitSettings()
     local rowPool = {}
     local RefreshMountList  -- forward declaration for button callbacks
 
-    for i = 1, POOL_SIZE do
+    for i = 1, INITIAL_POOL do
         local row = CreateSettingsRow(content, i)
         row.removeBtn:SetScript("OnClick", function()
             CharacterMount.RemoveMount(row.mountID)
@@ -158,7 +158,18 @@ function CharacterMount.InitSettings()
 
         mountCount:SetText(#mountList .. " mounts in your character list")
 
-        for i = 1, POOL_SIZE do
+        -- Grow pool if the list exceeds current capacity
+        while #rowPool < #mountList do
+            local idx = #rowPool + 1
+            local row = CreateSettingsRow(content, idx)
+            row.removeBtn:SetScript("OnClick", function()
+                CharacterMount.RemoveMount(row.mountID)
+                RefreshMountList()
+            end)
+            rowPool[idx] = row
+        end
+
+        for i = 1, #rowPool do
             local row   = rowPool[i]
             local entry = mountList[i]
             if entry then
