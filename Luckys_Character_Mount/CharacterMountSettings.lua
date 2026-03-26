@@ -114,7 +114,15 @@ function CharacterMount.InitSettings()
     minimapCheck:SetChecked(not minimapState.hide)
     minimapCheck:SetScript("OnClick", function(self)
         if CharacterMount.minimapButton then
-            CharacterMount.minimapButton:SetShown_Persisted(self:GetChecked())
+            -- Derive the desired state from the persisted value rather than
+            -- GetChecked(), because the custom BackdropTemplate checkbox does
+            -- not reliably report the post-click state via GetChecked().
+            -- ms.hide=false means button is currently shown → click should hide it (newShow=false).
+            -- ms.hide=true  means button is currently hidden → click should show it (newShow=true).
+            local ms = CharacterMountDB.minimap
+            local newShow = ms.hide
+            CharacterMount.minimapButton:SetShown_Persisted(newShow)
+            self:SetChecked(newShow)  -- keep visual in sync
         end
     end)
 
