@@ -58,8 +58,14 @@ function CharacterMount.HookMountJournalButton()
         UpdateButton()
     end)
 
-    -- Hook selection changes to keep button text in sync
-    if MountJournal_Select then
+    -- Hook selection changes to keep button text in sync.
+    -- MountJournal_UpdateMountDisplay is the reliable hook in TWW — it fires
+    -- whenever the detail panel refreshes for a new selection regardless of
+    -- how the selection was made. MountJournal_Select is kept as a fallback
+    -- for older clients where it still exists as a global.
+    if MountJournal_UpdateMountDisplay then
+        hooksecurefunc("MountJournal_UpdateMountDisplay", function() UpdateButton() end)
+    elseif MountJournal_Select then
         hooksecurefunc("MountJournal_Select", function() UpdateButton() end)
     end
     MountJournal:HookScript("OnShow", function() C_Timer.After(0, UpdateButton) end)
