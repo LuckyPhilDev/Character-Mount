@@ -107,11 +107,34 @@ function CharacterMount.InitSettings()
     debugHint:SetPoint("TOPLEFT", debugCheck, "BOTTOMLEFT", 0, -2)
     debugHint:SetText("Print detailed mount selection diagnostics to chat.")
 
+    -- Minimap button checkbox
+    local minimapState = CharacterMountDB.minimap or {}
+    local minimapCheck = LuckyUI.CreateCheckbox(canvas, 16)
+    minimapCheck:SetPoint("TOPLEFT", debugHint, "BOTTOMLEFT", 0, -10)
+    minimapCheck:SetChecked(not minimapState.hide)
+    minimapCheck:SetScript("OnClick", function(self)
+        if CharacterMount.minimapButton then
+            CharacterMount.minimapButton:SetShown_Persisted(self:GetChecked())
+        end
+    end)
+
+    local minimapLabel = canvas:CreateFontString(nil, "OVERLAY")
+    minimapLabel:SetFont(LuckyUI.BODY_FONT, 13)
+    minimapLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
+    minimapLabel:SetPoint("LEFT", minimapCheck, "RIGHT", 8, 0)
+    minimapLabel:SetText("Minimap button")
+
+    local minimapHint = canvas:CreateFontString(nil, "OVERLAY")
+    minimapHint:SetFont(LuckyUI.BODY_FONT, 11)
+    minimapHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+    minimapHint:SetPoint("TOPLEFT", minimapCheck, "BOTTOMLEFT", 0, -2)
+    minimapHint:SetText("Show the Character Mount button on the minimap.")
+
     -- Mount list heading
     local mountHeading = canvas:CreateFontString(nil, "OVERLAY")
     mountHeading:SetFont(LuckyUI.TITLE_FONT, 14)
     mountHeading:SetTextColor(C.goldAccent[1], C.goldAccent[2], C.goldAccent[3])
-    mountHeading:SetPoint("TOPLEFT", debugHint, "BOTTOMLEFT", 0, -20)
+    mountHeading:SetPoint("TOPLEFT", minimapHint, "BOTTOMLEFT", 0, -20)
     mountHeading:SetText("Mount List")
 
     -- Open Mount Journal button (next to heading)
@@ -198,6 +221,8 @@ function CharacterMount.InitSettings()
 
     canvas:SetScript("OnShow", function()
         debugCheck:SetChecked(CharacterMountDB.debugMode or false)
+        local ms = CharacterMountDB.minimap or {}
+        minimapCheck:SetChecked(not ms.hide)
         RefreshMountList()
     end)
 
