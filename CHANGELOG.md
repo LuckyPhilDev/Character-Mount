@@ -1,7 +1,7 @@
-## [1.2.0] - 2026-03-24
+## [1.2.1] - 2026-04-04
 
 ### Added
-- Minimap button — left-click to open the mount list, right-click for settings, middle-click to toggle dev mode
+- Mount count shown in the header of the mount list window — displays active mounts and how many are excluded.
 
-### Improved
-- Mount list and settings panel now handle any number of mounts without a fixed cap
+### Fixed
+- Excluded mounts section now expands to show all excluded mounts instead of capping at six.

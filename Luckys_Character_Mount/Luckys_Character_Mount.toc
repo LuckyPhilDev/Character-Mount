@@ -1,7 +1,7 @@
 ## Interface: 120000
 ## Title: Lucky's Character Mount
 ## Notes: Summons a random racial or class mount. Per-character list, auto-populated.
-## Version: 1.2.0
+## Version: 1.2.1
 ## Author: Lucky Phil
 ## OptionalDeps: Luckys_Utils
 ## SavedVariables: CharacterMountDB

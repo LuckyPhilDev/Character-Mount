@@ -82,7 +82,6 @@ local C  = LuckyUI.C
 local WC = LuckyUI.WC
 
 local INITIAL_ACTIVE_POOL = 20
-local EXCL_POOL_SIZE   = 6
 local ROW_HEIGHT       = 28
 local ROW_GAP          = 2
 
@@ -169,6 +168,13 @@ function CharacterMount.CreateUI()
     -- Header bar (gradient background, gold title, close button)
     LuckyUI.CreateHeader(frame, "Character Mounts")
 
+    -- Count label (right side of header)
+    frame.countLabel = frame:CreateFontString(nil, "OVERLAY")
+    frame.countLabel:SetFont(LuckyUI.BODY_FONT, 11)
+    frame.countLabel:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+    frame.countLabel:SetPoint("RIGHT", frame, "TOPRIGHT", -36, -18)
+    frame.countLabel:SetJustifyH("RIGHT")
+
     -- -----------------------------------------------------------------------
     -- Footer separator line
     -- -----------------------------------------------------------------------
@@ -203,24 +209,14 @@ function CharacterMount.CreateUI()
     end)
 
     -- -----------------------------------------------------------------------
-    -- Excluded rows (fixed positions above footer)
+    -- Excluded rows (pool grows dynamically in RefreshUI)
     -- -----------------------------------------------------------------------
     frame.excludedPool = {}
-    for i = 1, EXCL_POOL_SIZE do
-        local row = CreateRow(frame, false, 330)
-        local fromBottom = 48 + (EXCL_POOL_SIZE - i) * (ROW_HEIGHT + ROW_GAP)
-        row:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, fromBottom)
-        row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, fromBottom)
-        row:SetHeight(ROW_HEIGHT)
-        frame.excludedPool[i] = row
-    end
 
     -- -----------------------------------------------------------------------
-    -- Divider: thin line + "Excluded" label
+    -- Divider: thin line + "Excluded" label (positioned dynamically in RefreshUI)
     -- -----------------------------------------------------------------------
     local divider = LuckyUI.CreateDivider(frame, "Excluded")
-    divider:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, 230)
-    divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 230)
     divider:Hide()
     frame.divider = divider
 
@@ -337,18 +333,33 @@ function CharacterMount.RefreshUI()
     end
     table.sort(excludedList, function(a, b) return a.name < b.name end)
 
+    -- Update header count label
+    local exclStr = #excludedList > 0 and (" • " .. #excludedList .. " excluded") or ""
+    frame.countLabel:SetText(#activeList .. " mounts" .. exclStr)
+
     -- Resize scroll frame: expand to fill the frame when no excluded section is shown.
-    local scrollBottomY = (#excludedList > 0) and 248 or 48
+    local exclCount = #excludedList
+    local exclHeight = exclCount * (ROW_HEIGHT + ROW_GAP)
+    local scrollBottomY = exclCount > 0 and (48 + exclHeight + 22) or 48
     frame.scrollFrame:ClearAllPoints()
     frame.scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -36)
     frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, scrollBottomY)
 
-    if #excludedList > 0 then
-        frame.divider:Show()
-        for i = 1, EXCL_POOL_SIZE do
+    -- Grow excluded pool if needed
+    while #frame.excludedPool < exclCount do
+        frame.excludedPool[#frame.excludedPool + 1] = CreateRow(frame, false, 330)
+    end
+
+    if exclCount > 0 then
+        for i = 1, #frame.excludedPool do
             local row  = frame.excludedPool[i]
             local item = excludedList[i]
             if item then
+                local fromBottom = 48 + (exclCount - i) * (ROW_HEIGHT + ROW_GAP)
+                row:ClearAllPoints()
+                row:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, fromBottom)
+                row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, fromBottom)
+                row:SetHeight(ROW_HEIGHT)
                 row.icon:SetTexture(item.icon)
                 row.icon:SetDesaturated(true)
                 row.nameLabel:SetText(item.name)
@@ -361,10 +372,14 @@ function CharacterMount.RefreshUI()
                 row:Hide()
             end
         end
+        frame.divider:ClearAllPoints()
+        frame.divider:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, 48 + exclHeight + 2)
+        frame.divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 48 + exclHeight + 2)
+        frame.divider:Show()
     else
-        frame.divider:Hide()
-        for i = 1, EXCL_POOL_SIZE do
+        for i = 1, #frame.excludedPool do
             frame.excludedPool[i]:Hide()
         end
+        frame.divider:Hide()
     end
 end
