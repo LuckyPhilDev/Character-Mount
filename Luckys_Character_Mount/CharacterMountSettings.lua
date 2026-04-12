@@ -61,133 +61,74 @@ function CharacterMount.InitSettings()
     local db = CharacterMount.db
     if not db then return end
 
-    -- Canvas frame for Interface Options
-    local canvas = CreateFrame("Frame")
-    canvas:SetSize(600, 400)
-    canvas:Hide()
+    local panel = LuckySettings:NewPanel("Lucky's Character Mount")
+    CharacterMount.settingsCategory = panel.category
 
-    -- Title
-    local title = canvas:CreateFontString(nil, "OVERLAY")
-    title:SetFont(LuckyUI.TITLE_FONT, 16)
-    title:SetTextColor(C.goldPrimary[1], C.goldPrimary[2], C.goldPrimary[3])
-    title:SetPoint("TOPLEFT", 16, -16)
-    title:SetText("Lucky's Character Mount")
+    -- Options
+    panel:Toggle({
+        label    = "Debug mode",
+        desc     = "Print detailed mount selection diagnostics to chat.",
+        checked  = CharacterMountDB.debugMode or false,
+        gap      = 16,
+        onToggle = function(checked) CharacterMountDB.debugMode = checked end,
+    })
 
-    -- Description
-    local desc = canvas:CreateFontString(nil, "OVERLAY")
-    desc:SetFont(LuckyUI.BODY_FONT, 12)
-    desc:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-    desc:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-    desc:SetText("Configure settings and view your current mount list.")
-
-    -- Options heading
-    local optionsHeading = canvas:CreateFontString(nil, "OVERLAY")
-    optionsHeading:SetFont(LuckyUI.TITLE_FONT, 14)
-    optionsHeading:SetTextColor(C.goldAccent[1], C.goldAccent[2], C.goldAccent[3])
-    optionsHeading:SetPoint("TOPLEFT", desc, "BOTTOMLEFT", 0, -20)
-    optionsHeading:SetText("Options")
-
-    -- Debug mode checkbox (account-wide, stored at CharacterMountDB root)
-    local debugCheck = LuckyUI.CreateCheckbox(canvas, 16)
-    debugCheck:SetPoint("TOPLEFT", optionsHeading, "BOTTOMLEFT", 0, -10)
-    debugCheck:SetChecked(CharacterMountDB.debugMode or false)
-    debugCheck:SetScript("OnClick", function(self)
-        CharacterMountDB.debugMode = self:GetChecked()
-    end)
-
-    local debugLabel = canvas:CreateFontString(nil, "OVERLAY")
-    debugLabel:SetFont(LuckyUI.BODY_FONT, 13)
-    debugLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
-    debugLabel:SetPoint("LEFT", debugCheck, "RIGHT", 8, 0)
-    debugLabel:SetText("Debug mode")
-
-    local debugHint = canvas:CreateFontString(nil, "OVERLAY")
-    debugHint:SetFont(LuckyUI.BODY_FONT, 11)
-    debugHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-    debugHint:SetPoint("TOPLEFT", debugCheck, "BOTTOMLEFT", 0, -2)
-    debugHint:SetText("Print detailed mount selection diagnostics to chat.")
-
-    -- Minimap button checkbox
     local minimapState = CharacterMountDB.minimap or {}
-    local minimapCheck = LuckyUI.CreateCheckbox(canvas, 16)
-    minimapCheck:SetPoint("TOPLEFT", debugHint, "BOTTOMLEFT", 0, -10)
-    minimapCheck:SetChecked(not minimapState.hide)
-    minimapCheck:SetScript("OnClick", function(self)
-        if CharacterMount.minimapButton then
-            CharacterMount.minimapButton:SetShown_Persisted(self:GetChecked())
-        end
-    end)
+    panel:Toggle({
+        label    = "Minimap button",
+        desc     = "Show the Character Mount button on the minimap.",
+        checked  = not minimapState.hide,
+        onToggle = function(checked)
+            if CharacterMount.minimapButton then
+                CharacterMount.minimapButton:SetShown_Persisted(checked)
+            end
+        end,
+    })
 
-    local minimapLabel = canvas:CreateFontString(nil, "OVERLAY")
-    minimapLabel:SetFont(LuckyUI.BODY_FONT, 13)
-    minimapLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
-    minimapLabel:SetPoint("LEFT", minimapCheck, "RIGHT", 8, 0)
-    minimapLabel:SetText("Minimap button")
+    panel:Toggle({
+        label    = "Allow dismount while flying",
+        desc     = "When enabled, pressing the mount macro mid-air will dismount you.",
+        checked  = CharacterMountDB.allowFlyingDismount or false,
+        onToggle = function(checked)
+            CharacterMountDB.allowFlyingDismount = checked
+            CharacterMount.PreRoll()
+        end,
+    })
 
-    local minimapHint = canvas:CreateFontString(nil, "OVERLAY")
-    minimapHint:SetFont(LuckyUI.BODY_FONT, 11)
-    minimapHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-    minimapHint:SetPoint("TOPLEFT", minimapCheck, "BOTTOMLEFT", 0, -2)
-    minimapHint:SetText("Show the Character Mount button on the minimap.")
+    ---------------------------------------------------------------------------
+    -- Mount list (custom section below the builder controls)
+    ---------------------------------------------------------------------------
+    panel:Section("Mount List")
 
-    -- Allow flying dismount checkbox (account-wide)
-    local flyDismountCheck = LuckyUI.CreateCheckbox(canvas, 16)
-    flyDismountCheck:SetPoint("TOPLEFT", minimapHint, "BOTTOMLEFT", 0, -10)
-    flyDismountCheck:SetChecked(CharacterMountDB.allowFlyingDismount or false)
-    flyDismountCheck:SetScript("OnClick", function(self)
-        CharacterMountDB.allowFlyingDismount = self:GetChecked()
-        CharacterMount.PreRoll()
-    end)
-
-    local flyDismountLabel = canvas:CreateFontString(nil, "OVERLAY")
-    flyDismountLabel:SetFont(LuckyUI.BODY_FONT, 13)
-    flyDismountLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
-    flyDismountLabel:SetPoint("LEFT", flyDismountCheck, "RIGHT", 8, 0)
-    flyDismountLabel:SetText("Allow dismount while flying")
-
-    local flyDismountHint = canvas:CreateFontString(nil, "OVERLAY")
-    flyDismountHint:SetFont(LuckyUI.BODY_FONT, 11)
-    flyDismountHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-    flyDismountHint:SetPoint("TOPLEFT", flyDismountCheck, "BOTTOMLEFT", 0, -2)
-    flyDismountHint:SetText("When enabled, pressing the mount macro mid-air will dismount you.")
-
-    -- Mount list heading
-    local mountHeading = canvas:CreateFontString(nil, "OVERLAY")
-    mountHeading:SetFont(LuckyUI.TITLE_FONT, 14)
-    mountHeading:SetTextColor(C.goldAccent[1], C.goldAccent[2], C.goldAccent[3])
-    mountHeading:SetPoint("TOPLEFT", flyDismountHint, "BOTTOMLEFT", 0, -20)
-    mountHeading:SetText("Mount List")
+    local content = panel.content
+    local anchor  = panel.lastAnchor
 
     -- Open Mount Journal button (next to heading)
-    local journalBtn = LuckyUI.CreateButton(canvas, "Open Mount Journal", 140, 22, "secondary")
-    journalBtn:SetPoint("LEFT", mountHeading, "RIGHT", 12, 0)
+    local journalBtn = LuckyUI.CreateButton(content, "Open Mount Journal", 140, 22, "secondary")
+    journalBtn:SetPoint("LEFT", anchor, "RIGHT", 12, 0)
     journalBtn:SetScript("OnClick", function()
         HideUIPanel(SettingsPanel)
         C_Timer.After(0, function() ToggleCollectionsJournal(1) end)
     end)
 
     -- Mount count
-    local mountCount = canvas:CreateFontString(nil, "OVERLAY")
+    local mountCount = content:CreateFontString(nil, "OVERLAY")
     mountCount:SetFont(LuckyUI.BODY_FONT, 11)
     mountCount:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-    mountCount:SetPoint("TOPLEFT", mountHeading, "BOTTOMLEFT", 0, -4)
+    mountCount:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -4)
 
     -- Scroll frame for mount list
-    local scrollFrame = CreateFrame("ScrollFrame", nil, canvas, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", mountCount, "BOTTOMLEFT", 0, -8)
-    scrollFrame:SetPoint("BOTTOMRIGHT", canvas, "BOTTOMRIGHT", -30, 16)
-
-    local content = CreateFrame("Frame", nil, scrollFrame)
-    content:SetWidth(540)
-    content:SetHeight(1)
-    scrollFrame:SetScrollChild(content)
+    local listContainer = CreateFrame("Frame", nil, content)
+    listContainer:SetPoint("TOPLEFT", mountCount, "BOTTOMLEFT", 0, -8)
+    listContainer:SetPoint("RIGHT", content, "RIGHT", -16, 0)
+    listContainer:SetHeight(INITIAL_POOL * (ROW_HEIGHT + ROW_GAP))
 
     -- Pre-allocate mount rows
     local rowPool = {}
     local RefreshMountList  -- forward declaration for button callbacks
 
     for i = 1, INITIAL_POOL do
-        local row = CreateSettingsRow(content, i)
+        local row = CreateSettingsRow(listContainer, i)
         row.removeBtn:SetScript("OnClick", function()
             CharacterMount.RemoveMount(row.mountID)
             RefreshMountList()
@@ -205,7 +146,7 @@ function CharacterMount.InitSettings()
         -- Grow pool if the list exceeds current capacity
         while #rowPool < #mountList do
             local idx = #rowPool + 1
-            local row = CreateSettingsRow(content, idx)
+            local row = CreateSettingsRow(listContainer, idx)
             row.removeBtn:SetScript("OnClick", function()
                 CharacterMount.RemoveMount(row.mountID)
                 RefreshMountList()
@@ -237,18 +178,12 @@ function CharacterMount.InitSettings()
             end
         end
 
-        content:SetHeight(math.max(100, #mountList * (ROW_HEIGHT + ROW_GAP)))
+        listContainer:SetHeight(math.max(100, #mountList * (ROW_HEIGHT + ROW_GAP)))
     end
 
-    canvas:SetScript("OnShow", function()
-        debugCheck:SetChecked(CharacterMountDB.debugMode or false)
-        local ms = CharacterMountDB.minimap or {}
-        minimapCheck:SetChecked(not ms.hide)
+    panel.panel:HookScript("OnShow", function()
         RefreshMountList()
     end)
-
-    -- Register with the modern Settings API
-    CharacterMount.settingsCategory = LuckySettings:Register(canvas, "Lucky's Character Mount")
 end
 
 -- ---------------------------------------------------------------------------
