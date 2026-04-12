@@ -258,8 +258,8 @@ function CharacterMount.MountRandom()
         .. " ShapeshiftFormID=" .. tostring(formIndex))
 
     if IsMounted() then
-        if IsFlying() then
-            print(PREFIX .. " Flying — cannot dismount.")
+        if IsFlying() and not CharacterMountDB.allowFlyingDismount then
+            print(PREFIX .. " Flying — cannot dismount. Enable in settings to allow this.")
         else
             devLog("Dismounting.")
             Dismount()
@@ -442,7 +442,9 @@ function CharacterMount.BuildMacroBody(spellName)
     if spellName then
         -- Spell form: /cast handles the protected action, /cmount roll
         -- pre-rolls for the next click.
-        return "/dismount [mounted]\n/cast " .. spellName .. "\n/cmount roll"
+        local dismountCond = CharacterMountDB.allowFlyingDismount
+            and "[mounted]" or "[mounted, noflying]"
+        return "/dismount " .. dismountCond .. "\n/cast " .. spellName .. "\n/cmount roll"
     end
     -- Journal mount: /cmount mount summons via SummonByID, then pre-roll.
     return "/cmount mount\n/cmount roll"

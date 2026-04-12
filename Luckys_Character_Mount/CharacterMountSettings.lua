@@ -130,11 +130,32 @@ function CharacterMount.InitSettings()
     minimapHint:SetPoint("TOPLEFT", minimapCheck, "BOTTOMLEFT", 0, -2)
     minimapHint:SetText("Show the Character Mount button on the minimap.")
 
+    -- Allow flying dismount checkbox (account-wide)
+    local flyDismountCheck = LuckyUI.CreateCheckbox(canvas, 16)
+    flyDismountCheck:SetPoint("TOPLEFT", minimapHint, "BOTTOMLEFT", 0, -10)
+    flyDismountCheck:SetChecked(CharacterMountDB.allowFlyingDismount or false)
+    flyDismountCheck:SetScript("OnClick", function(self)
+        CharacterMountDB.allowFlyingDismount = self:GetChecked()
+        CharacterMount.PreRoll()
+    end)
+
+    local flyDismountLabel = canvas:CreateFontString(nil, "OVERLAY")
+    flyDismountLabel:SetFont(LuckyUI.BODY_FONT, 13)
+    flyDismountLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
+    flyDismountLabel:SetPoint("LEFT", flyDismountCheck, "RIGHT", 8, 0)
+    flyDismountLabel:SetText("Allow dismount while flying")
+
+    local flyDismountHint = canvas:CreateFontString(nil, "OVERLAY")
+    flyDismountHint:SetFont(LuckyUI.BODY_FONT, 11)
+    flyDismountHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+    flyDismountHint:SetPoint("TOPLEFT", flyDismountCheck, "BOTTOMLEFT", 0, -2)
+    flyDismountHint:SetText("When enabled, pressing the mount macro mid-air will dismount you.")
+
     -- Mount list heading
     local mountHeading = canvas:CreateFontString(nil, "OVERLAY")
     mountHeading:SetFont(LuckyUI.TITLE_FONT, 14)
     mountHeading:SetTextColor(C.goldAccent[1], C.goldAccent[2], C.goldAccent[3])
-    mountHeading:SetPoint("TOPLEFT", minimapHint, "BOTTOMLEFT", 0, -20)
+    mountHeading:SetPoint("TOPLEFT", flyDismountHint, "BOTTOMLEFT", 0, -20)
     mountHeading:SetText("Mount List")
 
     -- Open Mount Journal button (next to heading)
