@@ -3,10 +3,9 @@
 ## Notes: Summons a random racial or class mount. Per-character list, auto-populated.
 ## Version: 1.2.1
 ## Author: Lucky Phil
-## OptionalDeps: Luckys_Utils
 ## SavedVariables: CharacterMountDB
-
-Luckys_Utils\embeds.xml
+## Dependencies: Luckys_Utils
+## X-Curse-Project-ID: 1492089
 
 CharacterMountHelpers.lua
 MountData.lua
@@ -14,5 +13,3 @@ CharacterMount.lua
 CharacterMountUI.lua
 CharacterMountSettings.lua
 CharacterMountOnboarding.lua
-
-## X-Curse-Project-ID: 1492089
