@@ -1,5 +1,8 @@
 package-as: Luckys_Character_Mount
 
+move-folders:
+  Luckys_Character_Mount/Luckys_Character_Mount: Luckys_Character_Mount
+
 manual-changelog:
   filename: CHANGELOG.md
   markup-type: markdown
