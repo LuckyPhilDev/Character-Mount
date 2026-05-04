@@ -214,6 +214,22 @@ function CharacterMount.AddMount(mountID)
     return true
 end
 
+function CharacterMount.AddMountToAllCharacters(mountID)
+    local name = C_MountJournal.GetMountInfoByID(mountID)
+    if not name then return false end
+    
+    for key, data in pairs(CharacterMountDB) do
+        if type(data) == "table" and data.additions and data.exclusions then
+            data.exclusions[mountID] = nil
+            data.additions[mountID] = "manual"
+        end
+    end
+    print(PREFIX .. " Added " .. name .. " to all character lists.")
+    if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+    CharacterMount.PreRoll()
+    return true
+end
+
 function CharacterMount.RemoveMount(mountID)
     local name
     -- Handle spell-form IDs (e.g. "spell:783")
@@ -727,6 +743,16 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         end
     elseif lower == "settings" or lower == "config" or lower == "options" then
         CharacterMount.OpenSettings()
+    elseif lower:sub(1, 11) == "testunlock " then
+        local arg = msg:sub(12):match("^%s*(.-)%s*$")
+        local mountID = tonumber(arg)
+        if mountID then
+            if CharacterMount.ShowNewMountDialog then
+                CharacterMount.ShowNewMountDialog(mountID)
+            end
+        else
+            print(PREFIX .. " Please provide a valid mount ID. Usage: /cmount testunlock <id>")
+        end
     elseif lower == "debug" then
         print(PREFIX .. " --- Debug for " .. tostring(charKey) .. " ---")
         if not db then
@@ -777,6 +803,7 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
+eventFrame:RegisterEvent("NEW_MOUNT_ADDED")
 local addonLoaded_self        = false
 local addonLoaded_collections = false
 local playerLoggedIn          = false
@@ -833,5 +860,13 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
             eventFrame:UnregisterEvent("ADDON_LOADED")
         end
         TryShowOnboarding()
+    elseif event == "NEW_MOUNT_ADDED" then
+        local mountID = ...
+        if CharacterMountDB.autoPromptNewMount == false then return end
+        
+        local name = C_MountJournal.GetMountInfoByID(mountID)
+        if name and CharacterMount.ShowNewMountDialog then
+            CharacterMount.ShowNewMountDialog(mountID)
+        end
     end
 end)

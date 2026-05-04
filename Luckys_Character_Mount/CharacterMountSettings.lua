@@ -95,6 +95,16 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    panel:Toggle({
+        label    = "Prompt on New Mount",
+        desc     = "Show a dialog asking to add a newly unlocked mount to your character list.",
+        checked  = CharacterMountDB.autoPromptNewMount ~= false,
+        onToggle = function(checked)
+            CharacterMountDB.autoPromptNewMount = checked
+        end,
+    })
+
+
     ---------------------------------------------------------------------------
     -- Mount list (custom section below the builder controls)
     ---------------------------------------------------------------------------

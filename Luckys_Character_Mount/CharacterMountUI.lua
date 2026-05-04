@@ -383,3 +383,79 @@ function CharacterMount.RefreshUI()
         frame.divider:Hide()
     end
 end
+
+-- ---------------------------------------------------------------------------
+-- New Mount Dialog
+-- ---------------------------------------------------------------------------
+function CharacterMount.ShowNewMountDialog(mountID)
+    local name, _, icon = C_MountJournal.GetMountInfoByID(mountID)
+    if not name then return end
+
+    if not CharacterMount.newMountDialog then
+        local frame = LuckyUI.CreatePanel("CharacterMount_NewMountDialog", UIParent, 340, 180)
+        frame:SetPoint("CENTER", 0, 150)
+        frame:SetFrameStrata("DIALOG")
+        LuckyUI.CreateHeader(frame, "New Mount Unlocked!")
+        
+        local iconTex = frame:CreateTexture(nil, "ARTWORK")
+        iconTex:SetSize(40, 40)
+        iconTex:SetPoint("TOPLEFT", 16, -45)
+        frame.iconTex = iconTex
+        
+        local label = frame:CreateFontString(nil, "OVERLAY")
+        label:SetFont(LuckyUI.BODY_FONT, 14)
+        label:SetPoint("TOPLEFT", iconTex, "TOPRIGHT", 10, 0)
+        label:SetPoint("RIGHT", frame, "RIGHT", -16, 0)
+        label:SetJustifyH("LEFT")
+        label:SetWordWrap(true)
+        frame.label = label
+        
+        local subLabel = frame:CreateFontString(nil, "OVERLAY")
+        subLabel:SetFont(LuckyUI.BODY_FONT, 11)
+        subLabel:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -8)
+        subLabel:SetPoint("RIGHT", frame, "RIGHT", -16, 0)
+        subLabel:SetJustifyH("LEFT")
+        subLabel:SetTextColor(LuckyUI.C.textMuted[1], LuckyUI.C.textMuted[2], LuckyUI.C.textMuted[3])
+        subLabel:SetText("Would you like to add it to your mount list?")
+        
+        local hintLabel = frame:CreateFontString(nil, "OVERLAY")
+        hintLabel:SetFont(LuckyUI.BODY_FONT, 10)
+        hintLabel:SetPoint("BOTTOM", frame, "BOTTOM", 0, 16)
+        hintLabel:SetTextColor(0.5, 0.5, 0.5)
+        hintLabel:SetText("(This prompt can be disabled in settings)")
+        
+        local btnCurrent = LuckyUI.CreateButton(frame, "Current Char", 100, 26, "primary")
+        btnCurrent:SetPoint("BOTTOM", frame, "BOTTOM", 0, 40)
+        frame.btnCurrent = btnCurrent
+        
+        local btnClose = LuckyUI.CreateButton(frame, "No Thanks", 90, 26, "secondary")
+        btnClose:SetPoint("RIGHT", btnCurrent, "LEFT", -8, 0)
+        frame.btnClose = btnClose
+        
+        local btnAll = LuckyUI.CreateButton(frame, "All Chars", 100, 26, "primary")
+        btnAll:SetPoint("LEFT", btnCurrent, "RIGHT", 8, 0)
+        frame.btnAll = btnAll
+        
+        CharacterMount.newMountDialog = frame
+    end
+    
+    local dialog = CharacterMount.newMountDialog
+    dialog.iconTex:SetTexture(icon)
+    dialog.label:SetText(name)
+    
+    dialog.btnCurrent:SetScript("OnClick", function()
+        CharacterMount.AddMount(mountID)
+        dialog:Hide()
+    end)
+    
+    dialog.btnAll:SetScript("OnClick", function()
+        CharacterMount.AddMountToAllCharacters(mountID)
+        dialog:Hide()
+    end)
+    
+    dialog.btnClose:SetScript("OnClick", function()
+        dialog:Hide()
+    end)
+    
+    dialog:Show()
+end
