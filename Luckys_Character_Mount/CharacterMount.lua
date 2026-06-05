@@ -638,6 +638,7 @@ function CharacterMount.InitMinimapButton()
         icon    = MACRO_ICON,
         dbKey   = "minimap",
         db      = CharacterMountDB,
+        defaultAngle = 200,
         onClick = function(_, mouseBtn)
             if mouseBtn == "MiddleButton" then
                 CharacterMountDB.debugMode = not CharacterMountDB.debugMode
@@ -663,7 +664,7 @@ function CharacterMount.InitMinimapButton()
             tt:AddLine("Left-click: Open mount list", 0.9, 0.8, 0.5)
             tt:AddLine("Right-click: Open settings", 0.9, 0.8, 0.5)
             tt:AddLine("Middle-click: Toggle dev mode", 0.9, 0.8, 0.5)
-            tt:AddLine("Shift-drag: Move button", 0.54, 0.49, 0.41)
+            tt:AddLine("Drag: Move button", 0.54, 0.49, 0.41)
         end,
     })
 end

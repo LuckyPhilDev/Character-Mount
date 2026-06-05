@@ -1,3 +1,12 @@
+## [1.3.1] - 2026-06-05
+
+### Fixed
+- Minimap button now appears correctly on the minimap instead of sometimes hiding behind it.
+- Removed a black square that could appear when hovering the minimap button.
+
+### Improved
+- Move the minimap button with a simple click and drag.
+
 ## [1.3.0] - 2026-05-04
 
 ### Added
