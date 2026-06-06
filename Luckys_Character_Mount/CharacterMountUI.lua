@@ -387,6 +387,52 @@ end
 -- ---------------------------------------------------------------------------
 -- New Mount Dialog
 -- ---------------------------------------------------------------------------
+
+-- Load the live 3D mount model into the dialog's preview panel.
+-- Honours the CharacterMountDB.showMountPreview toggle (default on).
+--
+-- Model frames render blank when SetDisplayInfo runs before the frame is
+-- shown or before the model's data has loaded. We work around this by only
+-- loading after the dialog is visible and re-applying the display info on the
+-- next render tick via a one-shot OnUpdate.
+local function RefreshMountPreview(dialog, mountID)
+    local preview = dialog.preview
+    local model   = dialog.previewModel
+    if not preview then return end
+
+    if CharacterMountDB and CharacterMountDB.showMountPreview == false then
+        preview:Hide()
+        return
+    end
+
+    -- First return of GetMountInfoExtraByID is the creatureDisplayID.
+    local displayID = C_MountJournal.GetMountInfoExtraByID(mountID)
+    if not displayID or displayID == 0 then
+        preview:Hide()
+        return
+    end
+
+    preview:Show()
+
+    local function apply()
+        model:SetDisplayInfo(displayID)
+        model:SetPortraitZoom(0)
+        model:SetPosition(0, 0, 0)
+        model:SetFacing(0.6)
+        model:SetCamDistanceScale(1.4)
+    end
+
+    model:ClearModel()
+    apply()
+
+    -- Re-apply once on the next frame so the model isn't left blank if the
+    -- display info was set before the model data finished loading.
+    model:SetScript("OnUpdate", function(self)
+        self:SetScript("OnUpdate", nil)
+        apply()
+    end)
+end
+
 function CharacterMount.ShowNewMountDialog(mountID)
     local name, _, icon = C_MountJournal.GetMountInfoByID(mountID)
     if not name then return end
@@ -435,7 +481,31 @@ function CharacterMount.ShowNewMountDialog(mountID)
         local btnAll = LuckyUI.CreateButton(frame, "All Chars", 100, 26, "primary")
         btnAll:SetPoint("LEFT", btnCurrent, "RIGHT", 8, 0)
         frame.btnAll = btnAll
-        
+
+        -- 3D model preview panel, anchored to the right of the dialog.
+        local preview = LuckyUI.CreatePanel("CharacterMount_NewMountPreview", frame, 220, 220)
+        preview:SetPoint("LEFT", frame, "RIGHT", 10, 0)
+        -- Keep the preview pinned to the dialog rather than independently draggable.
+        preview:SetMovable(false)
+        preview:EnableMouse(false)
+        preview:RegisterForDrag()
+        preview:SetScript("OnDragStart", nil)
+        preview:SetScript("OnDragStop", nil)
+        preview:Hide()
+
+        local previewTitle = preview:CreateFontString(nil, "OVERLAY")
+        previewTitle:SetFont(LuckyUI.TITLE_FONT, 13)
+        previewTitle:SetTextColor(LuckyUI.C.goldPrimary[1], LuckyUI.C.goldPrimary[2], LuckyUI.C.goldPrimary[3])
+        previewTitle:SetPoint("TOP", preview, "TOP", 0, -8)
+        previewTitle:SetText("Preview")
+
+        local model = CreateFrame("PlayerModel", nil, preview)
+        model:SetPoint("TOPLEFT", preview, "TOPLEFT", 6, -28)
+        model:SetPoint("BOTTOMRIGHT", preview, "BOTTOMRIGHT", -6, 6)
+
+        frame.preview      = preview
+        frame.previewModel = model
+
         CharacterMount.newMountDialog = frame
     end
     
@@ -458,4 +528,6 @@ function CharacterMount.ShowNewMountDialog(mountID)
     end)
     
     dialog:Show()
+    -- Load the model after the dialog is shown — see RefreshMountPreview.
+    RefreshMountPreview(dialog, mountID)
 end

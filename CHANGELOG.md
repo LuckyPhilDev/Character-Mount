@@ -1,3 +1,9 @@
+## [1.3.2] - 2026-06-06
+
+### Added
+- The new mount prompt now shows a live 3D model of the mount you just unlocked, right next to the dialog.
+- New setting to turn the 3D mount preview on or off.
+
 ## [1.3.1] - 2026-06-05
 
 ### Fixed

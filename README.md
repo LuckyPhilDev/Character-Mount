@@ -8,14 +8,14 @@
 
 - **Per-character mount list** — every character gets their own curated set of mounts, stored account-wide in SavedVariables.
 - **Onboarding wizard** — on first login, suggests racial mounts, class mounts, and notable rare mounts. Pick what you want and get started in seconds.
-- **New mount prompt** — when you unlock a new mount, a dialog appears offering to add it to your current character's list or all characters at once.
+- **New mount prompt** — when you unlock a new mount, a dialog appears offering to add it to your current character's list or all characters at once, with a live 3D preview of the mount alongside it.
 - **Spell form support** — Druid Travel Form, Dracthyr Soar, and Worgen Running Wild are treated as mounts and randomised alongside journal mounts.
 - **Random summoning** — click the macro to summon a random mount from your list, automatically filtered by context (ground, flying, or water).
 - **Mount Journal integration** — Add and remove mounts from the list from the mount journal.
 - **Source tags** — colour-coded pills show each mount's origin: Racial, Class, Manual, Suggested, or Rare.
 - **Excluded mounts** — removed mounts appear in an "Excluded" section with a one-click restore.
 - **Minimap button** — left-click to open the mount list, right-click for settings, middle-click to toggle dev mode. Drag to reposition.
-- **Settings panel** — configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`. Includes a toggle to disable the new mount prompt.
+- **Settings panel** — configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`. Includes toggles to disable the new mount prompt and its 3D preview.
 - **Debug mode** — account-wide toggle to print mount selection diagnostics to chat.
 - **Open Mount Journal** — quick-access button in both the mount list and settings panel.
 

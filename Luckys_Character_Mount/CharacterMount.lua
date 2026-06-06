@@ -670,6 +670,31 @@ function CharacterMount.InitMinimapButton()
 end
 
 -- ---------------------------------------------------------------------------
+-- Sample mount for /cmount testpopup
+-- ---------------------------------------------------------------------------
+-- Resolve a mount ID to preview when testing the new-mount popup. The player's
+-- first collected mount is the most reliable "commonly-owned" sample; the
+-- constant is only a fallback for the rare case of an empty collection.
+local FALLBACK_SAMPLE_MOUNT_ID = 460  -- Grand Expedition Yak (widely owned)
+
+function CharacterMount.GetSampleMountID()
+    local allIDs = C_MountJournal.GetMountIDs()
+    if allIDs then
+        for _, id in ipairs(allIDs) do
+            local name, _, _, _, _, _, _, _, _, _, isCollected =
+                C_MountJournal.GetMountInfoByID(id)
+            if isCollected and name then return id end
+        end
+    end
+    -- No collected mounts — fall back to a known journal entry. Its display
+    -- still renders even if the mount isn't in the player's collection.
+    if C_MountJournal.GetMountInfoByID(FALLBACK_SAMPLE_MOUNT_ID) then
+        return FALLBACK_SAMPLE_MOUNT_ID
+    end
+    return nil
+end
+
+-- ---------------------------------------------------------------------------
 -- Slash commands
 -- ---------------------------------------------------------------------------
 
@@ -744,6 +769,17 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         end
     elseif lower == "settings" or lower == "config" or lower == "options" then
         CharacterMount.OpenSettings()
+    elseif lower == "testpopup" or lower:sub(1, 10) == "testpopup " then
+        -- Trigger the real new-mount popup on demand for testing the dialog
+        -- and its 3D preview. An optional ID overrides the sample mount.
+        local arg = msg:sub(11):match("^%s*(.-)%s*$")
+        local mountID = tonumber(arg) or CharacterMount.GetSampleMountID()
+        if mountID and CharacterMount.ShowNewMountDialog then
+            print(PREFIX .. " Testing new-mount popup with mount ID " .. mountID .. ".")
+            CharacterMount.ShowNewMountDialog(mountID)
+        else
+            print(PREFIX .. " No sample mount available. Usage: /cmount testpopup <id>")
+        end
     elseif lower:sub(1, 11) == "testunlock " then
         local arg = msg:sub(12):match("^%s*(.-)%s*$")
         local mountID = tonumber(arg)

@@ -104,6 +104,15 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    panel:Toggle({
+        label    = "Show 3D mount preview",
+        desc     = "Display a live 3D model of the mount next to the new-mount prompt.",
+        checked  = CharacterMountDB.showMountPreview ~= false,
+        onToggle = function(checked)
+            CharacterMountDB.showMountPreview = checked
+        end,
+    })
+
 
     ---------------------------------------------------------------------------
     -- Mount list (custom section below the builder controls)
