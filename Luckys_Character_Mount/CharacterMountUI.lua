@@ -175,6 +175,22 @@ function CharacterMount.CreateUI()
     frame.countLabel:SetJustifyH("RIGHT")
 
     -- -----------------------------------------------------------------------
+    -- Search box (filters the active mount list by name)
+    -- -----------------------------------------------------------------------
+    frame.searchQuery = ""
+    local search = LuckyUI.CreateSearchBox(frame, {
+        height      = 22,
+        placeholder = "Search mounts...",
+        onChange    = function(query)
+            frame.searchQuery = query
+            CharacterMount.RefreshUI()
+        end,
+    })
+    search:SetPoint("TOPLEFT",  frame, "TOPLEFT",  10, -38)
+    search:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -38)
+    frame.search = search
+
+    -- -----------------------------------------------------------------------
     -- Footer separator line
     -- -----------------------------------------------------------------------
     local footerLine = frame:CreateTexture(nil, "ARTWORK")
@@ -223,7 +239,7 @@ function CharacterMount.CreateUI()
     -- Active scroll frame
     -- -----------------------------------------------------------------------
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -36)
+    scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -66)
     scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
     frame.scrollFrame = scrollFrame
 
@@ -271,7 +287,19 @@ function CharacterMount.RefreshUI()
     if not frame then return end
 
     local content    = frame.content
-    local activeList = CharacterMount.GetEffectiveMountList()
+    local fullList   = CharacterMount.GetEffectiveMountList()
+    local query      = frame.searchQuery and frame.searchQuery:lower() or ""
+
+    -- Filter the active list by the search query (case-insensitive name match).
+    local activeList = fullList
+    if query ~= "" then
+        activeList = {}
+        for _, entry in ipairs(fullList) do
+            if entry.name and entry.name:lower():find(query, 1, true) then
+                activeList[#activeList + 1] = entry
+            end
+        end
+    end
 
     -- -----------------------------------------------------------------------
     -- 1. Active rows (pool grows dynamically if the list exceeds capacity)
@@ -315,10 +343,17 @@ function CharacterMount.RefreshUI()
     -- Resize scroll content to fit rows
     content:SetHeight(math.max(200, #activeList * (ROW_HEIGHT + ROW_GAP) + 14))
 
-    -- Empty hint
+    -- Empty hint — distinguishes "no mounts at all" from "no search matches".
     local isEmpty = #activeList == 0
     frame.emptyHint:SetShown(isEmpty)
-    frame.journalBtn:SetShown(isEmpty)
+    if isEmpty then
+        if query ~= "" then
+            frame.emptyHint:SetText("No mounts match \"" .. frame.searchQuery .. "\".")
+        else
+            frame.emptyHint:SetText("No mounts yet.\nUse /cmount add <name> or add mounts from the mount journal.")
+        end
+    end
+    frame.journalBtn:SetShown(isEmpty and query == "")
 
     -- -----------------------------------------------------------------------
     -- 2. Excluded rows
@@ -332,16 +367,19 @@ function CharacterMount.RefreshUI()
     end
     table.sort(excludedList, function(a, b) return a.name < b.name end)
 
-    -- Update header count label
+    -- Update header count label (shows "X of Y" while a search filter is active)
     local exclStr = #excludedList > 0 and (" • " .. #excludedList .. " excluded") or ""
-    frame.countLabel:SetText(#activeList .. " mounts" .. exclStr)
+    local mountsStr = (query ~= "")
+        and (#activeList .. " of " .. #fullList .. " mounts")
+        or  (#fullList .. " mounts")
+    frame.countLabel:SetText(mountsStr .. exclStr)
 
     -- Resize scroll frame: expand to fill the frame when no excluded section is shown.
     local exclCount = #excludedList
     local exclHeight = exclCount * (ROW_HEIGHT + ROW_GAP)
     local scrollBottomY = exclCount > 0 and (48 + exclHeight + 22) or 48
     frame.scrollFrame:ClearAllPoints()
-    frame.scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -36)
+    frame.scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -66)
     frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, scrollBottomY)
 
     -- Grow excluded pool if needed

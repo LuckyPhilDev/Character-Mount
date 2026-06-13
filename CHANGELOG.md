@@ -1,3 +1,8 @@
+## [1.4.0] - 2026-06-13
+
+### Added
+- A search box at the top of the mount list filters your mounts by name as you type.
+
 ## [1.3.3] - 2026-06-07
 
 ### Improved
