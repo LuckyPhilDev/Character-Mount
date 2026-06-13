@@ -79,7 +79,6 @@ end
 -- ---------------------------------------------------------------------------
 
 local C  = LuckyUI.C
-local WC = LuckyUI.WC
 
 local INITIAL_ACTIVE_POOL = 20
 local ROW_HEIGHT       = 28

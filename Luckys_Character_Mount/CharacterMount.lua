@@ -218,7 +218,7 @@ function CharacterMount.AddMountToAllCharacters(mountID)
     local name = C_MountJournal.GetMountInfoByID(mountID)
     if not name then return false end
     
-    for key, data in pairs(CharacterMountDB) do
+    for _, data in pairs(CharacterMountDB) do
         if type(data) == "table" and data.additions and data.exclusions then
             data.exclusions[mountID] = nil
             data.additions[mountID] = "manual"
@@ -480,7 +480,7 @@ function CharacterMount.PreRoll()
     -- Build usable + preferred pools (same logic as MountRandom)
     local usable, preferred = {}, {}
     for _, entry in ipairs(mountList) do
-        local ok = false
+        local ok
         if entry.spellID then
             ok = IsSpellKnown(entry.spellID)
         else

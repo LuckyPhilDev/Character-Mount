@@ -1,8 +1,6 @@
 -- Character Mount Helper Functions
 -- Provides utility functions for mount management
 
-local addonName, addon = ...
-
 -- Mount type constants
 local MOUNT_TYPE = {
     GROUND = 'ground',
@@ -36,7 +34,7 @@ local CLASS_ABILITIES = {
 
 -- Helper function to check if player is underwater
 local function IsUnderwater()
-    local timer, initial, maxvalue, scale, paused, label = GetMirrorTimerInfo(2)
+    local timer, _, _, scale, paused = GetMirrorTimerInfo(2)
     if timer == 'BREATH' and paused == 0 and scale < 0 then
         return true
     end
@@ -90,8 +88,7 @@ end
 function CharacterMount_CanUseTravelForm(mountType)
     local class = GetPlayerClass()
     local race = GetPlayerRace()
-    local playerLevel = UnitLevel("player")
-    
+
     -- Druid Travel Form adapts to context: flight in flyable areas,
     -- cheetah on ground, aquatic in water.  One spell covers all types.
     if class == "DRUID" then
