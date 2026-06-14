@@ -80,8 +80,9 @@ local function InitDB()
 
     if not CharacterMountDB[charKey] then
         CharacterMountDB[charKey] = {
-            additions  = {},
-            exclusions = {},
+            additions      = {},
+            exclusions     = {},
+            specExclusions = {},
         }
     end
 
@@ -95,8 +96,9 @@ local function InitDB()
         charData.mounts = nil
     end
 
-    charData.additions  = charData.additions  or {}
-    charData.exclusions = charData.exclusions or {}
+    charData.additions      = charData.additions      or {}
+    charData.exclusions     = charData.exclusions     or {}
+    charData.specExclusions = charData.specExclusions or {}
 
     db = charData
     CharacterMount.db = db
@@ -197,6 +199,103 @@ function CharacterMount.GetEffectiveMountList()
 end
 
 -- ---------------------------------------------------------------------------
+-- Per-spec availability
+-- ---------------------------------------------------------------------------
+-- Mounts are character-wide by default. db.specExclusions[mountID] is a set of
+-- spec IDs the mount is turned off for: db.specExclusions[mountID][specID] = true.
+-- A mount with no entry (or an empty set) is available for every spec.
+
+local function GetCurrentSpecID()
+    local idx = GetSpecialization()
+    if not idx then return nil end          -- below level 10: no active spec
+    return (GetSpecializationInfo(idx))
+end
+
+--- Ordered list of the character's specs: { { id, name, icon }, ... }
+function CharacterMount.GetCharacterSpecs()
+    local specs = {}
+    local num = GetNumSpecializations()
+    if not num then return specs end
+    for i = 1, num do
+        local id, name, _, icon = GetSpecializationInfo(i)
+        if id then
+            specs[#specs + 1] = { id = id, name = name, icon = icon }
+        end
+    end
+    return specs
+end
+
+--- Is the mount enabled for a specific spec ID?
+function CharacterMount.IsMountEnabledForSpec(mountID, specID)
+    if not specID then return true end
+    local ex = db.specExclusions and db.specExclusions[mountID]
+    return not (ex and ex[specID])
+end
+
+--- Is the mount enabled for the player's current spec? (true when no spec yet)
+function CharacterMount.IsMountEnabledForCurrentSpec(mountID)
+    local specID = GetCurrentSpecID()
+    if not specID then return true end
+    return CharacterMount.IsMountEnabledForSpec(mountID, specID)
+end
+
+--- Returns how many of the character's specs this mount is enabled for, and the total.
+function CharacterMount.GetMountSpecCounts(mountID)
+    local specs = CharacterMount.GetCharacterSpecs()
+    local enabled = 0
+    for _, spec in ipairs(specs) do
+        if CharacterMount.IsMountEnabledForSpec(mountID, spec.id) then
+            enabled = enabled + 1
+        end
+    end
+    return enabled, #specs
+end
+
+--- Enable or disable a mount for a single spec, then refresh UI and macro.
+function CharacterMount.SetMountSpecEnabled(mountID, specID, enabled)
+    if not specID then return end
+    db.specExclusions = db.specExclusions or {}
+    if enabled then
+        local ex = db.specExclusions[mountID]
+        if ex then
+            ex[specID] = nil
+            if next(ex) == nil then db.specExclusions[mountID] = nil end
+        end
+    else
+        db.specExclusions[mountID] = db.specExclusions[mountID] or {}
+        db.specExclusions[mountID][specID] = true
+    end
+    if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+    CharacterMount.PreRoll()
+end
+
+--- Drop all per-spec settings for a mount (called when it is added/removed/reset).
+local function ClearSpecExclusions(mountID)
+    if db.specExclusions then db.specExclusions[mountID] = nil end
+end
+
+--- Open the per-mount spec dropdown anchored to `anchor`.
+function CharacterMount.ShowSpecMenu(anchor, mountID)
+    if not mountID or not MenuUtil or not MenuUtil.CreateContextMenu then return end
+    local specs = CharacterMount.GetCharacterSpecs()
+    if #specs == 0 then return end
+    MenuUtil.CreateContextMenu(anchor, function(_, root)
+        root:CreateTitle("Use this mount for:")
+        for _, spec in ipairs(specs) do
+            root:CreateCheckbox(spec.name,
+                function()
+                    return CharacterMount.IsMountEnabledForSpec(mountID, spec.id)
+                end,
+                function()
+                    CharacterMount.SetMountSpecEnabled(mountID, spec.id,
+                        not CharacterMount.IsMountEnabledForSpec(mountID, spec.id))
+                    return MenuResponse.Refresh
+                end)
+        end
+    end)
+end
+
+-- ---------------------------------------------------------------------------
 -- Public add / remove / unexclude
 -- ---------------------------------------------------------------------------
 
@@ -208,6 +307,7 @@ function CharacterMount.AddMount(mountID)
     end
     db.exclusions[mountID] = nil
     db.additions[mountID]  = "manual"
+    ClearSpecExclusions(mountID)
     print(PREFIX .. " Added " .. name .. " to your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
@@ -222,6 +322,7 @@ function CharacterMount.AddMountToAllCharacters(mountID)
         if type(data) == "table" and data.additions and data.exclusions then
             data.exclusions[mountID] = nil
             data.additions[mountID] = "manual"
+            if data.specExclusions then data.specExclusions[mountID] = nil end
         end
     end
     print(PREFIX .. " Added " .. name .. " to all character lists.")
@@ -242,6 +343,7 @@ function CharacterMount.RemoveMount(mountID)
     end
     db.additions[mountID]  = nil
     db.exclusions[mountID] = true
+    ClearSpecExclusions(mountID)
     print(PREFIX .. " Removed " .. name .. " from your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
@@ -250,6 +352,7 @@ end
 function CharacterMount.UnexcludeMount(mountID)
     db.exclusions[mountID] = nil
     db.additions[mountID]  = "manual"
+    ClearSpecExclusions(mountID)
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
 end
 
@@ -347,7 +450,10 @@ function CharacterMount.MountRandom()
     -- Filter to journal mounts only.
     local usable = {}
     for _, entry in ipairs(mountList) do
-        if not entry.spellID then
+        if not CharacterMount.IsMountEnabledForCurrentSpec(entry.id) then
+            devLog("[SPEC SKIP] " .. tostring(entry.name)
+                .. " (disabled for current spec)")
+        elseif not entry.spellID then
             local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
             devLog("[MOUNT CHECK] id=" .. tostring(entry.id)
                 .. " name=" .. tostring(entry.name)
@@ -481,7 +587,9 @@ function CharacterMount.PreRoll()
     local usable, preferred = {}, {}
     for _, entry in ipairs(mountList) do
         local ok
-        if entry.spellID then
+        if not CharacterMount.IsMountEnabledForCurrentSpec(entry.id) then
+            ok = false
+        elseif entry.spellID then
             ok = IsSpellKnown(entry.spellID)
         else
             local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
@@ -721,12 +829,14 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
     elseif lower == "roll" then
         CharacterMount.PreRoll()
     elseif lower == "reset" then
-        db.exclusions = {}
+        db.exclusions     = {}
+        db.specExclusions = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         print(PREFIX .. " All exclusions cleared.")
     elseif lower == "reset all" then
-        db.exclusions = {}
-        db.additions  = {}
+        db.exclusions     = {}
+        db.additions      = {}
+        db.specExclusions = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         print(PREFIX .. " All exclusions and manual additions cleared.")
     elseif lower == "reset onboarding" then
@@ -841,6 +951,7 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:RegisterEvent("NEW_MOUNT_ADDED")
+eventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 local addonLoaded_self        = false
 local addonLoaded_collections = false
 local playerLoggedIn          = false
@@ -905,5 +1016,11 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         if name and CharacterMount.ShowNewMountDialog then
             CharacterMount.ShowNewMountDialog(mountID)
         end
+    elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
+        local unit = ...
+        if unit and unit ~= "player" then return end
+        -- Re-roll the macro and refresh the list so per-spec choices take effect.
+        CharacterMount.UpdateMacro()
+        if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     end
 end)

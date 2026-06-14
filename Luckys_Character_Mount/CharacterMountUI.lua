@@ -120,8 +120,9 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
         end
     end)
 
-    -- Name label — width depends on whether a source label shares the space
-    local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 72 or 0) - 30
+    -- Name label — width depends on whether the source label and spec button
+    -- share the trailing space (active rows only).
+    local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 110 or 0) - 30
     row.nameLabel = row:CreateFontString(nil, "OVERLAY")
     row.nameLabel:SetFont(LuckyUI.BODY_FONT, 13)
     row.nameLabel:SetSize(nameLabelWidth, ROW_HEIGHT)
@@ -132,9 +133,32 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
 
     if hasSourceLabel then
+        -- Per-spec availability button. Shows enabled/total spec count and
+        -- opens a dropdown to toggle the mount on or off per spec.
+        row.specBtn = LuckyUI.CreateButton(row, "", 34, 22, "secondary")
+        row.specBtn:SetPoint("RIGHT", row.actionBtn, "LEFT", -4, 0)
+        row.specBtn:SetScript("OnClick", function()
+            CharacterMount.ShowSpecMenu(row.specBtn, row.mountID)
+        end)
+        row.specBtn:SetScript("OnEnter", function(self)
+            if not row.mountID then return end
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine("Available for specs")
+            for _, spec in ipairs(CharacterMount.GetCharacterSpecs()) do
+                if CharacterMount.IsMountEnabledForSpec(row.mountID, spec.id) then
+                    GameTooltip:AddLine(spec.name, 0.45, 0.85, 0.45)
+                else
+                    GameTooltip:AddLine(spec.name .. " (off)", 0.75, 0.4, 0.4)
+                end
+            end
+            GameTooltip:AddLine("Click to change", 0.6, 0.6, 0.6)
+            GameTooltip:Show()
+        end)
+        row.specBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
         row.pill = CreateFrame("Frame", nil, row)
         row.pill:SetHeight(16)
-        row.pill:SetPoint("RIGHT", row.actionBtn, "LEFT", -4, 0)
+        row.pill:SetPoint("RIGHT", row.specBtn, "LEFT", -4, 0)
         row.pillBg = row.pill:CreateTexture(nil, "BACKGROUND")
         row.pillBg:SetAllPoints()
         row.pillBg:SetColorTexture(1, 1, 1, 0.15)
@@ -315,10 +339,20 @@ function CharacterMount.RefreshUI()
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", content, "TOPLEFT",
                          0, -6 - (i - 1) * (ROW_HEIGHT + ROW_GAP))
+            row.mountID    = entry.id
+            row.isExcluded = false
+
+            -- Dim mounts that are turned off for the current spec.
+            local activeForSpec = CharacterMount.IsMountEnabledForCurrentSpec(entry.id)
             row.icon:SetTexture(entry.icon)
-            row.icon:SetDesaturated(false)
+            row.icon:SetDesaturated(not activeForSpec)
             row.nameLabel:SetText(entry.name)
-            row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
+            if activeForSpec then
+                row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
+            else
+                row.nameLabel:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+            end
+
             if row.sourceLabel then
                 local sl = CharacterMount.SourceLabel[entry.source] or ""
                 local rgb = CharacterMount.SourcePillRGB[entry.source]
@@ -331,9 +365,14 @@ function CharacterMount.RefreshUI()
                 row.pill:SetWidth(math.max(tw + 12, 30))
                 row.pill:Show()
             end
+
+            if row.specBtn then
+                local enabled, total = CharacterMount.GetMountSpecCounts(entry.id)
+                row.specBtn:SetText(enabled .. "/" .. total)
+                row.specBtn:SetShown(total > 1)
+            end
+
             row.actionBtn:SetText("\195\151")
-            row.mountID    = entry.id
-            row.isExcluded = false
             row:Show()
         else
             row:Hide()

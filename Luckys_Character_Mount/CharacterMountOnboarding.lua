@@ -692,8 +692,9 @@ end
 
 function CharacterMount.ResetOnboarding()
     CharacterMount.db.onboardingComplete = nil
-    CharacterMount.db.additions  = {}
-    CharacterMount.db.exclusions = {}
+    CharacterMount.db.additions      = {}
+    CharacterMount.db.exclusions     = {}
+    CharacterMount.db.specExclusions = {}
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.ShowOnboarding()
     print(PREFIX .. " Onboarding reset.")
