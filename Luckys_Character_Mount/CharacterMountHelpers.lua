@@ -32,7 +32,6 @@ local CLASS_ABILITIES = {
     },
 }
 
--- Helper function to check if player is underwater
 local function IsUnderwater()
     local timer, _, _, scale, paused = GetMirrorTimerInfo(2)
     if timer == 'BREATH' and paused == 0 and scale < 0 then
@@ -41,7 +40,6 @@ local function IsUnderwater()
     return false
 end
 
--- Helper function to check if player is in Vashj'ir
 local function IsInVashjir()
     local zone = GetZoneText()
     return zone == 'Shimmering Expanse' 
@@ -56,19 +54,16 @@ local function ShouldUseGroundMount()
     return IsAltKeyDown()
 end
 
--- Get player's class information
 local function GetPlayerClass()
     local _, englishClass = UnitClass("player")
     return englishClass
 end
 
--- Get player's race information
 local function GetPlayerRace()
     local _, englishRace = UnitRace("player")
     return englishRace
 end
 
--- Check if a spell is known by the player
 local function IsSpellKnownByPlayer(spellID)
     local spellInfo = C_Spell.GetSpellInfo(spellID)
     if not spellInfo then
@@ -150,7 +145,6 @@ function CharacterMount_UseTravelForm(spellID)
         return false, 'Spell cannot be used here.'
     end
     
-    -- Cast the spell
     C_Spell.CastSpell(spellID)
     return true, 'Using ' .. spellInfo.name .. '...'
 end
