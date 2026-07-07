@@ -1,3 +1,8 @@
+## [1.5.0] - 2026-07-07
+
+### Added
+- Mounts from your character's list are now marked with a tick in the main Mount Journal, so you can see which ones you've chosen at a glance.
+
 ## [1.4.3] - 2026-07-05
 
 ### Improved
