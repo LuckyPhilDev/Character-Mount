@@ -4,30 +4,169 @@
 
 CharacterMount = CharacterMount or {}
 
+local C = LuckyUI.C
+
 -- ---------------------------------------------------------------------------
 -- Mount Journal integration — "Add/Remove" button on the journal detail panel
 -- ---------------------------------------------------------------------------
 
+local function NormalizeMountID(mountID)
+    if type(mountID) == "string" then
+        return tonumber(mountID) or mountID
+    end
+    return mountID
+end
+
+local function GetMountIDFromData(data)
+    if type(data) == "number" then return NormalizeMountID(data) end
+    if type(data) ~= "table" then return nil end
+
+    if data.mountID then return NormalizeMountID(data.mountID) end
+    if data.id and not data.GetObjectType then return NormalizeMountID(data.id) end
+    if data.data then return GetMountIDFromData(data.data) end
+    if data.mountInfo then return GetMountIDFromData(data.mountInfo) end
+    return nil
+end
+
+local function GetJournalRowMountID(button, elementData)
+    local mountID = GetMountIDFromData(elementData) or GetMountIDFromData(button)
+    if mountID then return mountID end
+
+    if button and type(button.GetElementData) == "function" then
+        return GetMountIDFromData(button:GetElementData())
+    end
+    return nil
+end
+
+local function IsOnCharList(mountID)
+    local db = CharacterMount.db
+    if not db or not mountID then return false end
+    if db.additions and db.additions[mountID] then return true end
+    for _, entry in ipairs(CharacterMount.GetEffectiveMountList()) do
+        if entry.id == mountID and (entry.source == "racial" or entry.source == "class") then
+            return true
+        end
+    end
+    return false
+end
+
+local function HideJournalRowIndicator(button)
+    if button and button.charMountBadge then
+        button.charMountBadge:Hide()
+    end
+    if button and button.charMountCheck then
+        button.charMountCheck:Hide()
+    end
+    if button and button.charMountTick then
+        button.charMountTick:Hide()
+    end
+    if button and button.charMountTickHitbox then
+        button.charMountTickHitbox:Hide()
+    end
+end
+
+-- Tick on each journal list row for mounts on the character list.
+local function UpdateJournalRowIndicator(button, elementData)
+    if not button then return end
+
+    local mountID = GetJournalRowMountID(button, elementData)
+    if not mountID then
+        HideJournalRowIndicator(button)
+        return
+    end
+
+    local tick = button.charMountTick
+    if not tick then
+        local hitbox = CreateFrame("Frame", nil, button)
+        hitbox:SetSize(30, 30)
+        hitbox:SetPoint("RIGHT", button, "RIGHT", -8, 0)
+        hitbox:EnableMouse(true)
+        if button.GetFrameLevel and hitbox.SetFrameLevel then
+            hitbox:SetFrameLevel(button:GetFrameLevel() + 8)
+        end
+        hitbox:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine("Character Mount")
+            GameTooltip:AddLine("This mount is in your character mount list.", 0.9, 0.85, 0.65, true)
+            GameTooltip:Show()
+        end)
+        hitbox:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+
+        tick = hitbox:CreateTexture(nil, "OVERLAY", nil, 7)
+        tick:SetSize(22, 22)
+        tick:SetPoint("CENTER", hitbox, "CENTER", 0, 0)
+        tick:SetAtlas("common-icon-checkmark")
+        tick:SetVertexColor(C.success[1], C.success[2], C.success[3], 1)
+        button.charMountTick = tick
+        button.charMountTickHitbox = hitbox
+    end
+
+    HideJournalRowIndicator(button)
+    local shown = IsOnCharList(mountID)
+    tick:SetShown(shown)
+    if button.charMountTickHitbox then
+        button.charMountTickHitbox:SetShown(shown)
+    end
+end
+
+local function GetMountJournalScrollBox()
+    if not MountJournal then return nil end
+    if MountJournal.ScrollBox then return MountJournal.ScrollBox end
+    if MountJournal.ListScrollFrame and MountJournal.ListScrollFrame.ScrollBox then
+        return MountJournal.ListScrollFrame.ScrollBox
+    end
+    return nil
+end
+
+local function EnumerateVisibleJournalRows(callback)
+    local scrollBox = GetMountJournalScrollBox()
+    if scrollBox and scrollBox.ForEachFrame then
+        scrollBox:ForEachFrame(callback)
+        return
+    end
+
+    if MountJournal and MountJournal.ListScrollFrame and MountJournal.ListScrollFrame.buttons then
+        for _, button in ipairs(MountJournal.ListScrollFrame.buttons) do
+            if button and button:IsShown() then callback(button) end
+        end
+    end
+end
+
+local function TryHookJournalRows()
+    local scrollBox = GetMountJournalScrollBox()
+    if not scrollBox or scrollBox.CharacterMountHooked then return end
+
+    scrollBox.CharacterMountHooked = true
+    if ScrollUtil and ScrollUtil.AddAcquiredFrameCallback then
+        ScrollUtil.AddAcquiredFrameCallback(scrollBox, function(_, row, elementData)
+            UpdateJournalRowIndicator(row, elementData)
+        end, nil, true)
+    elseif ScrollUtil and ScrollUtil.AddInitializedFrameCallback then
+        ScrollUtil.AddInitializedFrameCallback(scrollBox, function(_, row, elementData)
+            UpdateJournalRowIndicator(row, elementData)
+        end, nil, true)
+    end
+end
+
+function CharacterMount.RefreshJournalIndicators()
+    TryHookJournalRows()
+    EnumerateVisibleJournalRows(UpdateJournalRowIndicator)
+end
+
 function CharacterMount.HookMountJournalButton()
     if not MountJournal then return end
-    if CharacterMount.journalButton then return end
-
-    local db = CharacterMount.db
+    if CharacterMount.journalButton then
+        CharacterMount.RefreshJournalIndicators()
+        return
+    end
 
     local btn = LuckyUI.CreateButton(MountJournal.MountDisplay, "", 160, 22, "secondary")
     btn:SetPoint("BOTTOMLEFT", MountJournal.MountDisplay, "BOTTOMLEFT", 4, 4)
 
     local function GetSelectedMountID()
         return MountJournal.selectedMountID or 0
-    end
-
-    local function IsAutoMount(mountID)
-        for _, entry in ipairs(CharacterMount.GetEffectiveMountList()) do
-            if entry.id == mountID and (entry.source == "racial" or entry.source == "class") then
-                return true
-            end
-        end
-        return false
     end
 
     local function UpdateButton()
@@ -39,7 +178,7 @@ function CharacterMount.HookMountJournalButton()
         end
 
         btn:Enable()
-        if db.additions[mountID] or IsAutoMount(mountID) then
+        if IsOnCharList(mountID) then
             btn:SetText("Remove from Char List")
         else
             btn:SetText("Add to Char List")
@@ -50,7 +189,7 @@ function CharacterMount.HookMountJournalButton()
         local mountID = GetSelectedMountID()
         if not mountID or mountID == 0 then return end
 
-        if db.additions[mountID] or IsAutoMount(mountID) then
+        if IsOnCharList(mountID) then
             CharacterMount.RemoveMount(mountID)
         else
             CharacterMount.AddMount(mountID)
@@ -68,17 +207,24 @@ function CharacterMount.HookMountJournalButton()
     elseif MountJournal_Select then
         hooksecurefunc("MountJournal_Select", function() UpdateButton() end)
     end
-    MountJournal:HookScript("OnShow", function() C_Timer.After(0, UpdateButton) end)
+    if MountJournal_InitMountButton then
+        hooksecurefunc("MountJournal_InitMountButton", UpdateJournalRowIndicator)
+    end
+    MountJournal:HookScript("OnShow", function()
+        C_Timer.After(0, function()
+            UpdateButton()
+            CharacterMount.RefreshJournalIndicators()
+        end)
+    end)
 
     UpdateButton()
+    CharacterMount.RefreshJournalIndicators()
     CharacterMount.journalButton = btn
 end
 
 -- ---------------------------------------------------------------------------
 -- Character Mount list window
 -- ---------------------------------------------------------------------------
-
-local C  = LuckyUI.C
 
 local INITIAL_ACTIVE_POOL = 20
 local ROW_HEIGHT       = 28
@@ -307,6 +453,8 @@ end
 -- RefreshUI — show/hide and reconfigure pool rows; never creates new frames
 -- ---------------------------------------------------------------------------
 function CharacterMount.RefreshUI()
+    CharacterMount.RefreshJournalIndicators()
+
     local frame = CharacterMount.frame
     if not frame then return end
 
