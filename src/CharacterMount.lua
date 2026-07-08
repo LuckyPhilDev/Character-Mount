@@ -360,6 +360,32 @@ end
 -- MountRandom — called by the macro
 -- ---------------------------------------------------------------------------
 
+--- Encounters where Blizzard allows mounting during combat. SummonByID is
+--- only situationally blocked in combat; in these zones the block is lifted,
+--- and it works fine from insecure code (mount SPELL casts stay blocked even
+--- from secure macros, so summoning by ID is the only path). Zone list
+--- mirrors LiteMount's combat override.
+local function IsCombatMountZone()
+    -- Amirdrassil raid (Tindral Sageswift): 2234 is the parent of the
+    -- relevant maps, so walk up the map tree from the player's map.
+    local mapID = C_Map.GetBestMapForUnit("player")
+    local id = mapID
+    while id and id > 0 do
+        if id == 2234 then return true end
+        local info = C_Map.GetMapInfo(id)
+        id = info and info.parentMapID
+    end
+
+    local instanceID = select(8, GetInstanceInfo())
+    -- The Dawnbreaker dungeon (TWW).
+    if instanceID == 2662 then return true end
+    -- Manaforge Omega raid (Dimensius): only the fight's own maps.
+    if instanceID == 2810 and mapID and mapID >= 2467 and mapID <= 2470 then
+        return true
+    end
+    return false
+end
+
 function CharacterMount.MountRandom()
     devLog("MountRandom called.")
 
@@ -396,8 +422,8 @@ function CharacterMount.MountRandom()
         end
     end
 
-    if InCombatLockdown() then
-        print(PREFIX .. " In combat — cannot mount.")
+    if InCombatLockdown() and not IsCombatMountZone() then
+        print(PREFIX .. " In combat, cannot mount.")
         return
     end
 
@@ -568,7 +594,9 @@ function CharacterMount.BuildMacroBody(spellName)
             and "[mounted]" or "[mounted, noflying]"
         return "/dismount " .. dismountCond .. "\n/cast " .. spellName .. "\n/cmount roll"
     end
-    -- Journal mount: /cmount mount summons via SummonByID, then pre-roll.
+    -- Journal mount: /cmount mount summons via SummonByID. In combat that is
+    -- blocked except in encounters where Blizzard allows mounting; MountRandom
+    -- checks the zone and summons there too.
     return "/cmount mount\n/cmount roll"
 end
 
