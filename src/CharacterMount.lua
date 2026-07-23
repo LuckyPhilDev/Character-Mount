@@ -27,12 +27,13 @@ end
 
 CharacterMount.SourceColor = {
     racial          = LuckyUI.WC.info,
-    class           = LuckyUI.WC.goldAccent,
-    class_form      = LuckyUI.WC.goldAccent,
+    class           = LuckyUI.WC.danger,
+    class_form      = LuckyUI.WC.danger,
     manual          = LuckyUI.WC.success,
     suggested_class = LuckyUI.WC.success,
     suggested_race  = LuckyUI.WC.info,
     rare            = LuckyUI.WC.purple,
+    shop            = LuckyUI.WC.goldPrimary,
 }
 
 CharacterMount.SourceLabel = {
@@ -43,17 +44,19 @@ CharacterMount.SourceLabel = {
     suggested_class = "Suggested",
     suggested_race  = "Racial",
     rare            = "Rare",
+    shop            = "Shop",
 }
 
 -- RGB values for pill/tag backgrounds (matched to SourceColor)
 CharacterMount.SourcePillRGB = {
     racial          = LuckyUI.C.info,
-    class           = LuckyUI.C.goldAccent,
-    class_form      = LuckyUI.C.goldAccent,
+    class           = LuckyUI.C.danger,
+    class_form      = LuckyUI.C.danger,
     manual          = LuckyUI.C.success,
     suggested_class = LuckyUI.C.success,
     suggested_race  = LuckyUI.C.info,
     rare            = LuckyUI.C.purple,
+    shop            = LuckyUI.C.goldPrimary,
 }
 
 -- Spell-based "mounts" (class/racial forms). Keyed by a synthetic ID
@@ -943,6 +946,40 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
             end
         else
             print(PREFIX .. " Please provide a valid mount ID. Usage: /cmount testunlock <id>")
+        end
+    elseif lower == "sources" or lower:sub(1, 8) == "sources " then
+        -- Dev probe: does the journal expose a usable "In-Game Shop" source flag?
+        local filter = tonumber(msg:sub(9))
+        local counts, order, matched = {}, {}, {}
+        for _, mountID in ipairs(C_MountJournal.GetMountIDs()) do
+            local name, _, _, _, _, sourceType, _, _, _, _, isCollected =
+                C_MountJournal.GetMountInfoByID(mountID)
+            if isCollected and sourceType then
+                if not counts[sourceType] then
+                    counts[sourceType] = 0
+                    order[#order + 1] = sourceType
+                end
+                counts[sourceType] = counts[sourceType] + 1
+                if sourceType == filter then
+                    local _, _, sourceText = C_MountJournal.GetMountInfoExtraByID(mountID)
+                    sourceText = (sourceText or ""):gsub("\n", " | ")
+                    matched[#matched + 1] = string.format("  [%d] %s — %s", mountID, tostring(name), sourceText)
+                end
+            end
+        end
+        table.sort(order)
+        print(PREFIX .. " Collected mounts by sourceType:")
+        for _, sourceType in ipairs(order) do
+            print(string.format("  %2d  %-24s %d",
+                sourceType,
+                tostring(_G["BATTLE_PET_SOURCE_" .. sourceType]),
+                counts[sourceType]))
+        end
+        if filter then
+            print(PREFIX .. " sourceType " .. filter .. " (" .. #matched .. "):")
+            for _, line in ipairs(matched) do print(line) end
+        else
+            print("  /cmount sources <n> — list the mounts in one source bucket")
         end
     elseif lower == "debug" then
         print(PREFIX .. " --- Debug for " .. tostring(charKey) .. " ---")

@@ -521,6 +521,22 @@ function MD.GetSuggestedClassMountIDs(classFile)
     return MD.SUGGESTED_MOUNTS.class[classFile] or {}
 end
 
+-- Mount journal source index for the in-game shop (BATTLE_PET_SOURCE_10).
+local SHOP_SOURCE_TYPE = 10
+
+--- Returns the IDs of every shop mount, read from the journal at call time
+--- so the list needs no manual upkeep.
+function MD.GetShopMountIDs()
+    local ids = {}
+    for _, mountID in ipairs(C_MountJournal.GetMountIDs()) do
+        local _, _, _, _, _, sourceType = C_MountJournal.GetMountInfoByID(mountID)
+        if sourceType == SHOP_SOURCE_TYPE then
+            ids[#ids + 1] = mountID
+        end
+    end
+    return ids
+end
+
 --- Returns the flat array of rare mount IDs.
 function MD.GetRareMountIDs()
     return MD.RARE_MOUNTS

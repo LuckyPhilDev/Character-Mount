@@ -7,14 +7,14 @@
 ### Features
 
 - **Per-character mount list**: every character gets their own curated set of mounts, stored account-wide in SavedVariables.
-- **Onboarding wizard**: on first login, suggests racial mounts, class mounts, and notable rare mounts. Pick what you want and get started in seconds.
+- **Onboarding wizard**: on first login, suggests racial mounts, class mounts, notable rare mounts, and any shop mounts you own. Pick what you want and get started in seconds.
 - **New mount prompt**: when you unlock a new mount, a dialog appears offering to add it to your current character's list or all characters at once, with a live 3D preview of the mount alongside it.
 - **Spell form support**: Druid Travel Form, Dracthyr Soar, and Worgen Running Wild are treated as mounts and randomised alongside journal mounts.
 - **Random summoning**: click the macro to summon a random mount from your list, automatically filtered by context (ground, flying, or water).
 - **Combat mounting**: the macro also works mid-combat in the rare encounters where the game allows it, such as Tindral Sageswift, Dimensius, and The Dawnbreaker.
 - **Mount Journal integration**: Add and remove mounts from the list from the mount journal, with a button on the selected mount or a middle-click on any mount in the list.
 - **Search the list**: a search box at the top of the mount list filters your mounts by name as you type, with the header showing how many match.
-- **Source tags**: colour-coded pills show each mount's origin: Racial, Class, Manual, Suggested, or Rare.
+- **Source tags**: colour-coded pills show each mount's origin: Racial, Class, Manual, Suggested, Rare, or Shop.
 - **Per-spec control**: each mount has a spec button showing how many of your specs it applies to. Click it to tick the specs a mount should be used for. Mounts switched off for your current spec are dimmed in the list and skipped when you summon a random mount.
 - **Excluded mounts**: removed mounts appear in an "Excluded" section with a one-click restore.
 - **Minimap button**: left-click to open the mount list, right-click for settings, middle-click to toggle dev mode. Drag to reposition.

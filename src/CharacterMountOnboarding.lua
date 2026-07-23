@@ -1,5 +1,5 @@
 -- Character Mount: Onboarding — first-time mount selection flow.
--- Presents class, suggested class, racial, suggested race, and rare mounts for the user to opt into.
+-- Presents class, suggested class, racial, suggested race, rare, and shop mounts for the user to opt into.
 -- Uses pre-allocated frame pools (same pattern as CharacterMountUI.lua).
 
 CharacterMount = CharacterMount or {}
@@ -16,9 +16,9 @@ local PREFIX = WC.goldAccent .. "CharMount:" .. WC.reset
 local ROW_HEIGHT    = 26
 local ROW_GAP       = 2
 local HEADER_HEIGHT = 24
-local POOL_SIZE     = 60   -- pre-allocated checkbox rows
+local POOL_SIZE     = 60   -- checkbox rows pre-allocated; the pool grows on demand
 
-local SOURCE_PRIORITY = { "class", "suggested_class", "racial", "suggested_race", "rare" }
+local SOURCE_PRIORITY = { "class", "suggested_class", "racial", "suggested_race", "rare", "shop" }
 local SOURCE_DISPLAY_ORDER = {   -- sort order within each category
     class_form      = 1,
     racial          = 2,
@@ -26,7 +26,11 @@ local SOURCE_DISPLAY_ORDER = {   -- sort order within each category
     class           = 4,
     suggested_class = 5,
     rare            = 6,
+    shop            = 7,
 }
+
+-- Sources the player opts into rather than out of.
+local UNCHECKED_SOURCES = { rare = true, shop = true }
 
 local CATEGORY_ORDER  = { "ground", "flying", "water" }
 local CATEGORY_LABELS = {
@@ -67,6 +71,7 @@ local function BuildCandidates()
         racial          = MD.GetRacialMountIDs(englishRace),
         suggested_race  = MD.GetSuggestedRaceMountIDs(englishRace),
         rare            = MD.GetRareMountIDs(),
+        shop            = MD.GetShopMountIDs(),
     }
 
     -- Inject spell-based class forms (e.g. Druid Travel Form, Dracthyr Soar)
@@ -112,7 +117,7 @@ local function BuildCandidates()
                     C_MountJournal.GetMountInfoByID(mountID)
                 if isCollected and isUsable and name and not shouldHideOnChar then
                     seen[mountID] = true
-                    local preChecked = (source ~= "rare")
+                    local preChecked = not UNCHECKED_SOURCES[source]
                     entries[#entries + 1] = {
                         id       = mountID,
                         name     = name,
@@ -465,7 +470,7 @@ function CharacterMount.RefreshOnboarding()
     local catGroups = GroupByCategory(entries)
 
     -- Hide all pool frames
-    for i = 1, POOL_SIZE do rowPool[i]:Hide() end
+    for i = 1, #rowPool do rowPool[i]:Hide() end
     for i = 1, HEADER_POOL_SIZE do headerPool[i]:Hide() end
     for i = 1, SUBHEADER_POOL_SIZE do subHeaderPool[i]:Hide() end
 
@@ -521,7 +526,7 @@ function CharacterMount.RefreshOnboarding()
                     end
                     local start = self:GetParent().catRowStart
                     local count = self:GetParent().catRowCount
-                    for i = start, math.min(start + count - 1, POOL_SIZE) do
+                    for i = start, math.min(start + count - 1, #rowPool) do
                         if rowPool[i]:IsShown() and rowPool[i].entryRef then
                             rowPool[i].check:SetChecked(rowPool[i].entryRef.checked)
                         end
@@ -571,7 +576,7 @@ function CharacterMount.RefreshOnboarding()
                         end
                         local start = self:GetParent().sgRowStart
                         local count = self:GetParent().sgRowCount
-                        for i = start, math.min(start + count - 1, POOL_SIZE) do
+                        for i = start, math.min(start + count - 1, #rowPool) do
                             if rowPool[i]:IsShown() and rowPool[i].entryRef then
                                 rowPool[i].check:SetChecked(rowPool[i].entryRef.checked)
                             end
@@ -586,8 +591,8 @@ function CharacterMount.RefreshOnboarding()
                 -- Mount rows
                 local indent = (sg.group and #sg.entries > 1) and 34 or 0
                 for _, entry in ipairs(sg.entries) do
-                    if rowIdx > POOL_SIZE then break end
-                    local row = rowPool[rowIdx]
+                    local row = rowPool[rowIdx] or CreateCheckboxRow(content, 340)
+                    rowPool[rowIdx] = row
                     row:ClearAllPoints()
                     row:SetPoint("TOPLEFT", content, "TOPLEFT", indent, yOffset)
                     row:SetWidth(340 - indent)
@@ -634,7 +639,7 @@ function CharacterMount.ToggleAllOnboarding(state)
         entry.checked = state
     end
     -- Update visible mount checkboxes
-    for i = 1, POOL_SIZE do
+    for i = 1, #rowPool do
         local row = rowPool[i]
         if row:IsShown() and row.entryRef then
             row.check:SetChecked(row.entryRef.checked)
