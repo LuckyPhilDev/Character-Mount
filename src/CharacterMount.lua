@@ -5,6 +5,22 @@ CharacterMount = CharacterMount or {}
 local ADDON_NAME = "Luckys_Character_Mount"
 local PREFIX     = LuckyUI.WC.goldAccent .. "CharMount:" .. LuckyUI.WC.reset
 
+-- Chat warnings for blocked mount attempts. Mashing the macro while waiting
+-- for combat to drop would otherwise flood chat, so repeats of the same
+-- message are dropped for a few seconds.
+local WARN_THROTTLE_SECONDS = 3
+local lastWarnAt = {}
+
+local function Warn(message)
+    if CharacterMountDB.quietMountWarnings then return end
+    local now = GetTime()
+    if lastWarnAt[message] and now - lastWarnAt[message] < WARN_THROTTLE_SECONDS then
+        return
+    end
+    lastWarnAt[message] = now
+    print(PREFIX .. " " .. message)
+end
+
 -- ---------------------------------------------------------------------------
 -- Mount source display (domain-specific, references LuckyUI colors)
 -- ---------------------------------------------------------------------------
@@ -404,7 +420,7 @@ function CharacterMount.MountRandom()
 
     if IsMounted() then
         if IsFlying() and not CharacterMountDB.allowFlyingDismount then
-            print(PREFIX .. " Flying — cannot dismount. Enable in settings to allow this.")
+            Warn("Flying, cannot dismount. Enable in settings to allow this.")
         else
             devLog("Dismounting.")
             Dismount()
@@ -423,22 +439,22 @@ function CharacterMount.MountRandom()
     end
 
     if InCombatLockdown() and not IsCombatMountZone() then
-        print(PREFIX .. " In combat, cannot mount.")
+        Warn("In combat, cannot mount.")
         return
     end
 
     if UnitIsDeadOrGhost("player") then
-        print(PREFIX .. " Dead — cannot mount.")
+        Warn("Dead, cannot mount.")
         return
     end
 
     if UnitInVehicle("player") or UnitOnTaxi("player") then
-        print(PREFIX .. " In vehicle or on taxi.")
+        Warn("In vehicle or on taxi.")
         return
     end
 
     if IsIndoors() then
-        print(PREFIX .. " Indoors — cannot mount.")
+        Warn("Indoors, cannot mount.")
         return
     end
 
@@ -555,7 +571,7 @@ function CharacterMount.MountRandom()
         end
     end
 
-    print(PREFIX .. " No usable mount found.")
+    Warn("No usable mount found.")
 end
 
 -- ---------------------------------------------------------------------------

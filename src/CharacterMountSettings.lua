@@ -118,6 +118,15 @@ function CharacterMount.InitSettings()
     })
 
     panel:Toggle({
+        label    = "Silence mount warnings",
+        desc     = "Stop chat messages when you cannot mount, such as in combat or indoors.",
+        checked  = CharacterMountDB.quietMountWarnings or false,
+        onToggle = function(checked)
+            CharacterMountDB.quietMountWarnings = checked
+        end,
+    })
+
+    panel:Toggle({
         label    = "Prompt on New Mount",
         desc     = "Show a dialog asking to add a newly unlocked mount to your character list.",
         checked  = CharacterMountDB.autoPromptNewMount ~= false,

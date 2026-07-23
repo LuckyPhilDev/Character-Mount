@@ -18,7 +18,7 @@
 - **Per-spec control**: each mount has a spec button showing how many of your specs it applies to. Click it to tick the specs a mount should be used for. Mounts switched off for your current spec are dimmed in the list and skipped when you summon a random mount.
 - **Excluded mounts**: removed mounts appear in an "Excluded" section with a one-click restore.
 - **Minimap button**: left-click to open the mount list, right-click for settings, middle-click to toggle dev mode. Drag to reposition.
-- **Settings panel**: configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`. Includes toggles to disable the new mount prompt and its 3D preview.
+- **Settings panel**: configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`. Includes toggles to disable the new mount prompt, its 3D preview, and the chat warnings shown when you cannot mount.
 - **Debug mode**: account-wide toggle to print mount selection diagnostics to chat.
 - **Open Mount Journal**: quick-access button in both the mount list and settings panel.
 
