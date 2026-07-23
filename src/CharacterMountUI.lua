@@ -285,6 +285,19 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     hl:SetAllPoints()
     hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
 
+    row:SetScript("OnMouseUp", function(self, mouseButton)
+        if mouseButton ~= "LeftButton" then return end
+        CharacterMount.ShowMountPreview(self.mountID, CharacterMount.frame)
+    end)
+
+    row:SetScript("OnEnter", function(self)
+        if type(self.mountID) ~= "number" then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Click to preview this mount.", 0.9, 0.85, 0.65, true)
+        GameTooltip:Show()
+    end)
+    row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     -- Mount icon
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetSize(22, 22)
@@ -648,34 +661,22 @@ function CharacterMount.RefreshUI()
 end
 
 -- ---------------------------------------------------------------------------
--- New Mount Dialog
+-- Mount model preview
 -- ---------------------------------------------------------------------------
 
--- Load the live 3D mount model into the dialog's preview panel.
--- Honours the CharacterMountDB.showMountPreview toggle (default on).
+-- Load the live 3D mount model into a PlayerModel frame. Returns false when
+-- the mount has no usable display (spell-form entries, missing data).
 --
 -- Model frames render blank when SetDisplayInfo runs before the frame is
 -- shown or before the model's data has loaded. We work around this by only
--- loading after the dialog is visible and re-applying the display info on the
+-- loading after the frame is visible and re-applying the display info on the
 -- next render tick via a one-shot OnUpdate.
-local function RefreshMountPreview(dialog, mountID)
-    local preview = dialog.preview
-    local model   = dialog.previewModel
-    if not preview then return end
-
-    if CharacterMountDB and CharacterMountDB.showMountPreview == false then
-        preview:Hide()
-        return
-    end
+local function LoadMountModel(model, mountID)
+    if type(mountID) ~= "number" then return false end
 
     -- First return of GetMountInfoExtraByID is the creatureDisplayID.
     local displayID = C_MountJournal.GetMountInfoExtraByID(mountID)
-    if not displayID or displayID == 0 then
-        preview:Hide()
-        return
-    end
-
-    preview:Show()
+    if not displayID or displayID == 0 then return false end
 
     local function apply()
         model:SetDisplayInfo(displayID)
@@ -688,12 +689,87 @@ local function RefreshMountPreview(dialog, mountID)
     model:ClearModel()
     apply()
 
-    -- Re-apply once on the next frame so the model isn't left blank if the
-    -- display info was set before the model data finished loading.
     model:SetScript("OnUpdate", function(self)
         self:SetScript("OnUpdate", nil)
         apply()
     end)
+    return true
+end
+
+-- Standalone preview window, opened by clicking a mount row in the list or
+-- setup window. Pinned beside the window it was opened from: it is parented
+-- to that window so it moves and hides with it, and cannot be dragged away.
+function CharacterMount.ShowMountPreview(mountID, anchorFrame)
+    -- Spell-form entries ("spell:<id>") have no mount model to show.
+    if type(mountID) ~= "number" then return end
+
+    local name = C_MountJournal.GetMountInfoByID(mountID)
+    if not name then return end
+
+    local frame = CharacterMount.previewFrame
+    if not frame then
+        frame = LuckyUI.CreatePanel("CharacterMount_MountPreview", UIParent, 260, 320)
+        frame:Hide()
+        tinsert(UISpecialFrames, "CharacterMount_MountPreview")
+        LuckyUI.CreateHeader(frame, "Preview")
+
+        frame:SetMovable(false)
+        frame:RegisterForDrag()
+        frame:SetScript("OnDragStart", nil)
+        frame:SetScript("OnDragStop", nil)
+
+        -- Fires when the parent window closes; without this the preview would
+        -- pop back up the next time that window is shown.
+        frame:SetScript("OnHide", function(self) self:Hide() end)
+
+        local nameLabel = frame:CreateFontString(nil, "OVERLAY")
+        nameLabel:SetFont(LuckyUI.BODY_FONT, 13)
+        nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
+        nameLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -38)
+        nameLabel:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -38)
+        nameLabel:SetJustifyH("CENTER")
+        nameLabel:SetWordWrap(true)
+        frame.nameLabel = nameLabel
+
+        local model = CreateFrame("PlayerModel", nil, frame)
+        model:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -60)
+        model:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
+        frame.model = model
+
+        CharacterMount.previewFrame = frame
+    end
+
+    frame:SetParent(anchorFrame or UIParent)
+    frame:ClearAllPoints()
+    if anchorFrame then
+        frame:SetPoint("TOPLEFT", anchorFrame, "TOPRIGHT", 10, 0)
+    else
+        frame:SetFrameStrata("DIALOG")
+        frame:SetPoint("CENTER")
+    end
+
+    frame.nameLabel:SetText(name)
+    frame:Show()
+    if not LoadMountModel(frame.model, mountID) then
+        frame:Hide()
+    end
+end
+
+-- ---------------------------------------------------------------------------
+-- New Mount Dialog
+-- ---------------------------------------------------------------------------
+
+-- Honours the CharacterMountDB.showMountPreview toggle (default on).
+local function RefreshMountPreview(dialog, mountID)
+    local preview = dialog.preview
+    if not preview then return end
+
+    if CharacterMountDB and CharacterMountDB.showMountPreview == false then
+        preview:Hide()
+        return
+    end
+
+    preview:SetShown(LoadMountModel(dialog.previewModel, mountID))
 end
 
 function CharacterMount.ShowNewMountDialog(mountID)

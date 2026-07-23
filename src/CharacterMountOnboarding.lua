@@ -248,6 +248,19 @@ local function CreateCheckboxRow(parent, rowWidth)
     hl:SetAllPoints()
     hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
 
+    row:SetScript("OnMouseUp", function(self, mouseButton)
+        if mouseButton ~= "LeftButton" or not self.entryRef then return end
+        CharacterMount.ShowMountPreview(self.entryRef.id, CharacterMount.onboardingFrame)
+    end)
+
+    row:SetScript("OnEnter", function(self)
+        if not self.entryRef or type(self.entryRef.id) ~= "number" then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Click to preview this mount.", 0.9, 0.85, 0.65, true)
+        GameTooltip:Show()
+    end)
+    row:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     row.check = LuckyUI.CreateCheckbox(row, 18)
     row.check:SetPoint("LEFT", row, "LEFT", 0, 0)
 
@@ -386,8 +399,8 @@ function CharacterMount.ShowOnboarding()
     blurb:SetWordWrap(true)
     blurb:SetText(
         "Choose mounts below to get your character list started. "
-        .. "You can add or remove mounts later from the journal or "
-        .. "by opening the /cmount menu.")
+        .. "Click a mount to preview it. You can add or remove mounts later "
+        .. "from the journal or by opening the /cmount menu.")
 
     -- -----------------------------------------------------------------------
     -- Scroll frame

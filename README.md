@@ -9,6 +9,7 @@
 - **Per-character mount list**: every character gets their own curated set of mounts, stored account-wide in SavedVariables.
 - **Onboarding wizard**: on first login, suggests racial mounts, class mounts, notable rare mounts, and any shop mounts you own. Pick what you want and get started in seconds.
 - **New mount prompt**: when you unlock a new mount, a dialog appears offering to add it to your current character's list or all characters at once, with a live 3D preview of the mount alongside it.
+- **Mount preview**: click any mount in your list or in the setup wizard to open a 3D preview window, handy when you cannot remember what a mount looks like.
 - **Spell form support**: Druid Travel Form, Dracthyr Soar, and Worgen Running Wild are treated as mounts and randomised alongside journal mounts.
 - **Random summoning**: click the macro to summon a random mount from your list, automatically filtered by context (ground, flying, or water).
 - **Combat mounting**: the macro also works mid-combat in the rare encounters where the game allows it, such as Tindral Sageswift, Dimensius, and The Dawnbreaker.
