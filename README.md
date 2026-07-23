@@ -32,7 +32,7 @@
 4. Type `/cmount macro` to create an action bar macro, then drag it to your bar.
 5. Click the macro to summon a random mount from your list.
 
-You can re-run the onboarding at any time via the **Setup** button in the mount list, or `/cmount reset onboarding`.
+You can re-run the onboarding at any time via the **Setup** button in the mount list, or `/cmount reset onboarding`. Both ask you to confirm first, since re-running Setup clears your current mount list.
 
 ---
 

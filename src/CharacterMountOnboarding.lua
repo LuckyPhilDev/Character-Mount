@@ -687,10 +687,10 @@ function CharacterMount.SkipOnboarding()
 end
 
 -- ---------------------------------------------------------------------------
--- Reset onboarding (for testing)
+-- Reset onboarding
 -- ---------------------------------------------------------------------------
 
-function CharacterMount.ResetOnboarding()
+local function DoResetOnboarding()
     CharacterMount.db.onboardingComplete = nil
     CharacterMount.db.additions      = {}
     CharacterMount.db.exclusions     = {}
@@ -698,4 +698,23 @@ function CharacterMount.ResetOnboarding()
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.ShowOnboarding()
     print(PREFIX .. " Onboarding reset.")
+end
+
+StaticPopupDialogs["CHARACTERMOUNT_RESET_SETUP"] = {
+    text = "Running Setup again will clear your current mount list and any spec choices.\n\nContinue?",
+    button1 = YES,
+    button2 = NO,
+    OnAccept = DoResetOnboarding,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+function CharacterMount.ResetOnboarding()
+    if next(CharacterMount.db.additions) then
+        StaticPopup_Show("CHARACTERMOUNT_RESET_SETUP")
+    else
+        DoResetOnboarding()
+    end
 end

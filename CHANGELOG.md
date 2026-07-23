@@ -5,3 +5,4 @@
 
 ### Improved
 - Repeated mount warnings, such as "In combat, cannot mount", no longer spam chat when you press the macro over and over. (Thanks for the suggestion Tuulani)
+- Re-running Setup now asks you to confirm first, so you no longer lose your mount list by clicking it. (Thanks for the suggestion Tuulani)
