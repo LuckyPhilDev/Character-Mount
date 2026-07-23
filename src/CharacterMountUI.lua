@@ -50,6 +50,38 @@ local function IsOnCharList(mountID)
     return false
 end
 
+local function ToggleCharList(mountID)
+    if IsOnCharList(mountID) then
+        CharacterMount.RemoveMount(mountID)
+    else
+        CharacterMount.AddMount(mountID)
+    end
+    local journalButton = CharacterMount.journalButton
+    if journalButton and journalButton.UpdateCharMountText then
+        journalButton.UpdateCharMountText()
+    end
+end
+
+-- Transparent full-row overlay so middle-click toggles the mount without
+-- selecting it. Non-middle clicks propagate through to the journal row.
+local function EnsureJournalRowMiddleClick(button)
+    if button.charMountMiddleClick then return button.charMountMiddleClick end
+
+    local overlay = CreateFrame("Frame", nil, button)
+    overlay:SetAllPoints(button)
+    overlay:EnableMouse(true)
+    overlay:SetPropagateMouseClicks(true)
+    overlay:SetPropagateMouseMotion(true)
+    overlay:SetScript("OnMouseUp", function(_, mouseButton)
+        if mouseButton ~= "MiddleButton" then return end
+        local mountID = GetJournalRowMountID(button)
+        if mountID then ToggleCharList(mountID) end
+    end)
+
+    button.charMountMiddleClick = overlay
+    return overlay
+end
+
 local function HideJournalRowIndicator(button)
     if button and button.charMountBadge then
         button.charMountBadge:Hide()
@@ -75,12 +107,16 @@ local function UpdateJournalRowIndicator(button, elementData)
         return
     end
 
+    local overlay = EnsureJournalRowMiddleClick(button)
+
     local tick = button.charMountTick
     if not tick then
-        local hitbox = CreateFrame("Frame", nil, button)
+        -- Parented to the overlay so its middle-clicks propagate up to it.
+        local hitbox = CreateFrame("Frame", nil, overlay)
         hitbox:SetSize(30, 30)
         hitbox:SetPoint("RIGHT", button, "RIGHT", -8, 0)
         hitbox:EnableMouse(true)
+        hitbox:SetPropagateMouseClicks(true)
         if button.GetFrameLevel and hitbox.SetFrameLevel then
             hitbox:SetFrameLevel(button:GetFrameLevel() + 8)
         end
@@ -88,6 +124,7 @@ local function UpdateJournalRowIndicator(button, elementData)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
             GameTooltip:AddLine("Character Mount")
             GameTooltip:AddLine("This mount is in your character mount list.", 0.9, 0.85, 0.65, true)
+            GameTooltip:AddLine("Middle-click the mount to remove it.", 0.9, 0.85, 0.65, true)
             GameTooltip:Show()
         end)
         hitbox:SetScript("OnLeave", function()
@@ -184,6 +221,8 @@ function CharacterMount.HookMountJournalButton()
             btn:SetText("Add to Char List")
         end
     end
+
+    btn.UpdateCharMountText = UpdateButton
 
     btn:SetScript("OnClick", function()
         local mountID = GetSelectedMountID()

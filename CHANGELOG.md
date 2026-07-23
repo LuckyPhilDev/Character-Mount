@@ -1,6 +1,7 @@
 ## [1.7.0] - 2026-07-23
 
 ### Added
+- Middle-click any mount in the Blizzard mount journal to add it to your character list, or remove it if it is already there. (Thanks for the suggestion Tuulani)
 - New "Silence mount warnings" setting to turn off the chat messages that appear when you cannot mount. (Thanks for the suggestion Tuulani)
 
 ### Improved

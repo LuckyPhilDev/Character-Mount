@@ -12,7 +12,7 @@
 - **Spell form support**: Druid Travel Form, Dracthyr Soar, and Worgen Running Wild are treated as mounts and randomised alongside journal mounts.
 - **Random summoning**: click the macro to summon a random mount from your list, automatically filtered by context (ground, flying, or water).
 - **Combat mounting**: the macro also works mid-combat in the rare encounters where the game allows it, such as Tindral Sageswift, Dimensius, and The Dawnbreaker.
-- **Mount Journal integration**: Add and remove mounts from the list from the mount journal.
+- **Mount Journal integration**: Add and remove mounts from the list from the mount journal, with a button on the selected mount or a middle-click on any mount in the list.
 - **Search the list**: a search box at the top of the mount list filters your mounts by name as you type, with the header showing how many match.
 - **Source tags**: colour-coded pills show each mount's origin: Racial, Class, Manual, Suggested, or Rare.
 - **Per-spec control**: each mount has a spec button showing how many of your specs it applies to. Click it to tick the specs a mount should be used for. Mounts switched off for your current spec are dimmed in the list and skipped when you summon a random mount.
