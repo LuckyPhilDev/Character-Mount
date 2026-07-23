@@ -713,6 +713,7 @@ local function DoResetOnboarding()
     CharacterMount.db.additions      = {}
     CharacterMount.db.exclusions     = {}
     CharacterMount.db.specExclusions = {}
+    CharacterMount.db.mountTypes     = {}
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.ShowOnboarding()
     print(PREFIX .. " Onboarding reset.")

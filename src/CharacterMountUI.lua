@@ -331,26 +331,15 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
 
     if hasSourceLabel then
-        -- Per-spec availability button. Shows enabled/total spec count and
-        -- opens a dropdown to toggle the mount on or off per spec.
+        -- Per-mount options button. Shows enabled/total spec count and opens a
+        -- dropdown to toggle the mount per spec and per mount type.
         row.specBtn = LuckyUI.CreateButton(row, "", 34, 22, "secondary")
         row.specBtn:SetPoint("RIGHT", row.actionBtn, "LEFT", -4, 0)
         row.specBtn:SetScript("OnClick", function()
             CharacterMount.ShowSpecMenu(row.specBtn, row.mountID)
         end)
         row.specBtn:SetScript("OnEnter", function(self)
-            if not row.mountID then return end
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:AddLine("Available for specs")
-            for _, spec in ipairs(CharacterMount.GetCharacterSpecs()) do
-                if CharacterMount.IsMountEnabledForSpec(row.mountID, spec.id) then
-                    GameTooltip:AddLine(spec.name, 0.45, 0.85, 0.45)
-                else
-                    GameTooltip:AddLine(spec.name .. " (off)", 0.75, 0.4, 0.4)
-                end
-            end
-            GameTooltip:AddLine("Click to change", 0.6, 0.6, 0.6)
-            GameTooltip:Show()
+            CharacterMount.ShowSpecButtonTooltip(self, row.mountID)
         end)
         row.specBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
@@ -568,8 +557,9 @@ function CharacterMount.RefreshUI()
 
             if row.specBtn then
                 local enabled, total = CharacterMount.GetMountSpecCounts(entry.id)
-                row.specBtn:SetText(enabled .. "/" .. total)
-                row.specBtn:SetShown(total > 1)
+                -- The count is spec-only; mount type choices never change it.
+                row.specBtn:SetText(total > 1 and (enabled .. "/" .. total) or "...")
+                row.specBtn:SetShown(total > 1 or type(entry.id) == "number")
             end
 
             row.actionBtn:SetText("\195\151")

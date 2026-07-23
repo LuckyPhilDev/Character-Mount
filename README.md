@@ -16,7 +16,8 @@
 - **Mount Journal integration**: Add and remove mounts from the list from the mount journal, with a button on the selected mount or a middle-click on any mount in the list.
 - **Search the list**: a search box at the top of the mount list filters your mounts by name as you type, with the header showing how many match.
 - **Source tags**: colour-coded pills show each mount's origin: Racial, Class, Manual, Suggested, Rare, or Shop.
-- **Per-spec control**: each mount has a spec button showing how many of your specs it applies to. Click it to tick the specs a mount should be used for. Mounts switched off for your current spec are dimmed in the list and skipped when you summon a random mount.
+- **Per-spec control**: each mount has an options button showing how many of your specs it applies to. Click it to tick the specs a mount should be used for. Mounts switched off for your current spec are dimmed in the list and skipped when you summon a random mount.
+- **Count as another type**: the same button lets you choose which types a mount counts as, with its own types ticked by default. Tick Ground on a flying-only mount and it becomes a candidate on the ground, or tick Flying on a ground mount for the look you want. Flying will not make a ground mount fly, it just gets summoned.
 - **Excluded mounts**: removed mounts appear in an "Excluded" section with a one-click restore.
 - **Minimap button**: left-click to open the mount list, right-click for settings, middle-click to toggle dev mode. Drag to reposition.
 - **Settings panel**: configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`. Includes toggles to disable the new mount prompt, its 3D preview, and the chat warnings shown when you cannot mount.
@@ -47,8 +48,8 @@ You can re-run the onboarding at any time via the **Setup** button in the mount 
 | `/cmount mount` | Summon a random mount from your list |
 | `/cmount add <name or id>` | Add a mount by name (partial match) or ID |
 | `/cmount remove <name or id>` | Remove a mount by name or ID |
-| `/cmount reset` | Clear all exclusions |
-| `/cmount reset all` | Clear exclusions and manual additions |
+| `/cmount reset` | Clear all exclusions and per-mount options |
+| `/cmount reset all` | Clear exclusions, manual additions, and per-mount options |
 | `/cmount reset onboarding` | Reset and re-run the onboarding wizard |
 | `/cmount debug` | Show saved state for the current character |
 

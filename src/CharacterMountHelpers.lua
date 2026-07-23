@@ -320,5 +320,36 @@ function CharacterMount_IsMountTypeMatch(requiredType, mountTypeID, isSteadyFlig
     return false
 end
 
+---
+-- The mount categories a mount belongs to by default, ignoring player context.
+-- Used to seed the per-mount "count as" choices.
+-- @param mountTypeID number The mount's type ID from the API
+-- @return table Set of category names, e.g. { ground = true }
+---
+function CharacterMount_GetNaturalMountTypes(mountTypeID)
+    local types = {}
+    for _, typeID in ipairs(MOUNT_TYPE_IDS.GROUND) do
+        if mountTypeID == typeID then types[MOUNT_TYPE.GROUND] = true end
+    end
+    for _, typeID in ipairs(MOUNT_TYPE_IDS.FLYING) do
+        if mountTypeID == typeID then types[MOUNT_TYPE.FLYING] = true end
+    end
+    for _, typeID in ipairs(MOUNT_TYPE_IDS.WATER) do
+        if mountTypeID == typeID then types[MOUNT_TYPE.WATER] = true end
+    end
+    if mountTypeID == MOUNT_TYPE_IDS.WATER_HYBRID then
+        types[MOUNT_TYPE.WATER] = true
+    end
+    return types
+end
+
+---
+-- True for mounts the game only lets you ride in specific water, which no
+-- player setting can override (underwater mounts, the Vashj'ir seahorse).
+---
+function CharacterMount_IsWaterOnlyMount(mountTypeID)
+    return mountTypeID == 254 or mountTypeID == 232
+end
+
 -- Export constants for external use
 CharacterMount_MOUNT_TYPE = MOUNT_TYPE

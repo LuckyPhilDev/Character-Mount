@@ -118,6 +118,7 @@ local function InitDB()
     charData.additions      = charData.additions      or {}
     charData.exclusions     = charData.exclusions     or {}
     charData.specExclusions = charData.specExclusions or {}
+    charData.mountTypes     = charData.mountTypes     or {}
 
     db = charData
     CharacterMount.db = db
@@ -288,30 +289,156 @@ function CharacterMount.SetMountSpecEnabled(mountID, specID, enabled)
     CharacterMount.PreRoll()
 end
 
---- Drop all per-spec settings for a mount (called when it is added/removed/reset).
-local function ClearSpecExclusions(mountID)
+--- Drop all per-mount settings (called when it is added/removed/reset).
+local function ClearMountSettings(mountID)
     if db.specExclusions then db.specExclusions[mountID] = nil end
+    if db.mountTypes then db.mountTypes[mountID] = nil end
 end
 
---- Open the per-mount spec dropdown anchored to `anchor`.
+-- ---------------------------------------------------------------------------
+-- Per-mount "count as" types
+-- ---------------------------------------------------------------------------
+-- db.mountTypes[mountID] is the set of categories a mount is picked for, e.g.
+-- { ground = true, flying = true }. No entry means "use the mount's real type",
+-- so only mounts the player has customised take up saved-variable space.
+
+local TYPE_OPTIONS = {
+    { key = CharacterMount_MOUNT_TYPE.GROUND, label = "Ground" },
+    { key = CharacterMount_MOUNT_TYPE.FLYING, label = "Flying" },
+    { key = CharacterMount_MOUNT_TYPE.WATER,  label = "Water"  },
+}
+
+local function GetMountTypeID(mountID)
+    local _, _, _, _, mountTypeID = C_MountJournal.GetMountInfoExtraByID(mountID)
+    return mountTypeID
+end
+
+--- The categories a mount currently counts as: the player's choice if they
+--- made one, otherwise the mount's real types.
+function CharacterMount.GetMountTypes(mountID)
+    local chosen = db.mountTypes and db.mountTypes[mountID]
+    if chosen then return chosen end
+    return CharacterMount_GetNaturalMountTypes(GetMountTypeID(mountID))
+end
+
+function CharacterMount.IsMountCountedAs(mountID, mountType)
+    return CharacterMount.GetMountTypes(mountID)[mountType] == true
+end
+
+function CharacterMount.SetMountCountedAs(mountID, mountType, enabled)
+    db.mountTypes = db.mountTypes or {}
+    local types = db.mountTypes[mountID]
+    if not types then
+        types = CharacterMount.GetMountTypes(mountID)
+        db.mountTypes[mountID] = types
+    end
+    types[mountType] = enabled or nil
+    CharacterMount.PreRoll()
+end
+
+--- Does this mount count as `category` right now? Honours the player's
+--- "count as" choice, falling back to the mount's real type.
+local function MountCountsAsCategory(mountID, category, mountTypeID, isSteadyFlight)
+    local chosen = db.mountTypes and db.mountTypes[mountID]
+    if not chosen then
+        return CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight)
+    end
+    if not chosen[category] then return false end
+    -- Underwater-only mounts still need real water; no setting changes that.
+    if category == CharacterMount_MOUNT_TYPE.WATER
+        and CharacterMount_IsWaterOnlyMount(mountTypeID) then
+        return CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight)
+    end
+    return true
+end
+
+--- Open the per-mount spec and type dropdown anchored to `anchor`.
 function CharacterMount.ShowSpecMenu(anchor, mountID)
     if not mountID or not MenuUtil or not MenuUtil.CreateContextMenu then return end
     local specs = CharacterMount.GetCharacterSpecs()
-    if #specs == 0 then return end
+    local isJournalMount = type(mountID) == "number"
+    if #specs == 0 and not isJournalMount then return end
+
     MenuUtil.CreateContextMenu(anchor, function(_, root)
-        root:CreateTitle("Use this mount for:")
-        for _, spec in ipairs(specs) do
-            root:CreateCheckbox(spec.name,
+        if #specs > 0 then
+            root:CreateTitle("Use this mount for:")
+            for _, spec in ipairs(specs) do
+                root:CreateCheckbox(spec.name,
+                    function()
+                        return CharacterMount.IsMountEnabledForSpec(mountID, spec.id)
+                    end,
+                    function()
+                        CharacterMount.SetMountSpecEnabled(mountID, spec.id,
+                            not CharacterMount.IsMountEnabledForSpec(mountID, spec.id))
+                        return MenuResponse.Refresh
+                    end)
+            end
+        end
+
+        if not isJournalMount then return end
+
+        local natural  = CharacterMount_GetNaturalMountTypes(GetMountTypeID(mountID))
+        local canFly   = natural[CharacterMount_MOUNT_TYPE.FLYING]
+
+        if #specs > 0 then root:CreateDivider() end
+        root:CreateTitle("Count as:")
+        for _, option in ipairs(TYPE_OPTIONS) do
+            local label = option.label
+            if natural[option.key] then
+                label = label .. LuckyUI.WC.textMuted .. " (default)" .. LuckyUI.WC.reset
+            end
+            root:CreateCheckbox(label,
                 function()
-                    return CharacterMount.IsMountEnabledForSpec(mountID, spec.id)
+                    return CharacterMount.IsMountCountedAs(mountID, option.key)
                 end,
                 function()
-                    CharacterMount.SetMountSpecEnabled(mountID, spec.id,
-                        not CharacterMount.IsMountEnabledForSpec(mountID, spec.id))
+                    CharacterMount.SetMountCountedAs(mountID, option.key,
+                        not CharacterMount.IsMountCountedAs(mountID, option.key))
                     return MenuResponse.Refresh
                 end)
         end
+
+        if not canFly and CharacterMount.IsMountCountedAs(mountID, CharacterMount_MOUNT_TYPE.FLYING) then
+            root:CreateTitle(LuckyUI.WC.danger
+                .. "Summoned when flying, but it cannot fly" .. LuckyUI.WC.reset)
+        end
     end)
+end
+
+--- Tooltip for the per-mount spec/type button, shared by both list panels.
+function CharacterMount.ShowSpecButtonTooltip(button, mountID)
+    if not mountID then return end
+    GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+
+    local specs = CharacterMount.GetCharacterSpecs()
+    if #specs > 0 then
+        GameTooltip:AddLine("Available for specs")
+        for _, spec in ipairs(specs) do
+            if CharacterMount.IsMountEnabledForSpec(mountID, spec.id) then
+                GameTooltip:AddLine(spec.name, 0.45, 0.85, 0.45)
+            else
+                GameTooltip:AddLine(spec.name .. " (off)", 0.75, 0.4, 0.4)
+            end
+        end
+    end
+
+    if type(mountID) == "number" then
+        if #specs > 0 then GameTooltip:AddLine(" ") end
+        GameTooltip:AddLine("Counts as")
+        local any = false
+        for _, option in ipairs(TYPE_OPTIONS) do
+            if CharacterMount.IsMountCountedAs(mountID, option.key) then
+                GameTooltip:AddLine(option.label, 0.45, 0.85, 0.45)
+                any = true
+            end
+        end
+        if not any then
+            GameTooltip:AddLine("Nothing selected", 0.75, 0.4, 0.4)
+        end
+    end
+
+    GameTooltip:AddLine("Click to change", 0.6, 0.6, 0.6)
+    GameTooltip:Show()
 end
 
 -- ---------------------------------------------------------------------------
@@ -326,7 +453,7 @@ function CharacterMount.AddMount(mountID)
     end
     db.exclusions[mountID] = nil
     db.additions[mountID]  = "manual"
-    ClearSpecExclusions(mountID)
+    ClearMountSettings(mountID)
     print(PREFIX .. " Added " .. name .. " to your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
@@ -342,6 +469,7 @@ function CharacterMount.AddMountToAllCharacters(mountID)
             data.exclusions[mountID] = nil
             data.additions[mountID] = "manual"
             if data.specExclusions then data.specExclusions[mountID] = nil end
+            if data.mountTypes then data.mountTypes[mountID] = nil end
         end
     end
     print(PREFIX .. " Added " .. name .. " to all character lists.")
@@ -362,7 +490,7 @@ function CharacterMount.RemoveMount(mountID)
     end
     db.additions[mountID]  = nil
     db.exclusions[mountID] = true
-    ClearSpecExclusions(mountID)
+    ClearMountSettings(mountID)
     print(PREFIX .. " Removed " .. name .. " from your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
@@ -371,7 +499,7 @@ end
 function CharacterMount.UnexcludeMount(mountID)
     db.exclusions[mountID] = nil
     db.additions[mountID]  = "manual"
-    ClearSpecExclusions(mountID)
+    ClearMountSettings(mountID)
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
 end
 
@@ -519,7 +647,7 @@ function CharacterMount.MountRandom()
         for _, entry in ipairs(usable) do
             local _, _, _, _, mountTypeID, _, _, _, _, isSteadyFlight =
                 C_MountJournal.GetMountInfoExtraByID(entry.id)
-            local isMatch = CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight)
+            local isMatch = MountCountsAsCategory(entry.id, category, mountTypeID, isSteadyFlight)
             devLog("[CAT MATCH] mountID=" .. tostring(entry.id)
                 .. " typeID=" .. tostring(mountTypeID)
                 .. " steadyFlight=" .. tostring(isSteadyFlight)
@@ -652,7 +780,7 @@ function CharacterMount.PreRoll()
             elseif category ~= CharacterMount_MOUNT_TYPE.NONE then
                 local _, _, _, _, mountTypeID, _, _, _, _, isSteadyFlight =
                     C_MountJournal.GetMountInfoExtraByID(entry.id)
-                if CharacterMount_IsMountTypeMatch(category, mountTypeID, isSteadyFlight) then
+                if MountCountsAsCategory(entry.id, category, mountTypeID, isSteadyFlight) then
                     preferred[#preferred + 1] = entry
                 end
             end
@@ -878,12 +1006,14 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
     elseif lower == "reset" then
         db.exclusions     = {}
         db.specExclusions = {}
+        db.mountTypes     = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         print(PREFIX .. " All exclusions cleared.")
     elseif lower == "reset all" then
         db.exclusions     = {}
         db.additions      = {}
         db.specExclusions = {}
+        db.mountTypes     = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         print(PREFIX .. " All exclusions and manual additions cleared.")
     elseif lower == "reset onboarding" then

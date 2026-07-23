@@ -1,6 +1,7 @@
 ## [1.7.0] - 2026-07-23
 
 ### Added
+- Choose which mount types each mount counts as, so a flying-only mount such as a paladin charger can still be picked when you are stuck on the ground. Its own types are ticked by default. (Thanks for the suggestion Tuulani)
 - Click any mount in your list or in Setup to open a 3D preview, so you can check what it looks like without mounting up. Drag the model to spin it around, scroll to zoom. (Thanks for the suggestion Tuulani)
 - Shop mounts now show up in Setup in their own section, left unticked so you choose which ones you want. (Thanks for the suggestion Tuulani)
 - Middle-click any mount in the Blizzard mount journal to add it to your character list, or remove it if it is already there. (Thanks for the suggestion Tuulani)

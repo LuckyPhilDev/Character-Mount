@@ -39,18 +39,7 @@ local function CreateSettingsRow(parent, index)
         CharacterMount.ShowSpecMenu(row.specBtn, row.mountID)
     end)
     row.specBtn:SetScript("OnEnter", function(self)
-        if not row.mountID then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("Available for specs")
-        for _, spec in ipairs(CharacterMount.GetCharacterSpecs()) do
-            if CharacterMount.IsMountEnabledForSpec(row.mountID, spec.id) then
-                GameTooltip:AddLine(spec.name, 0.45, 0.85, 0.45)
-            else
-                GameTooltip:AddLine(spec.name .. " (off)", 0.75, 0.4, 0.4)
-            end
-        end
-        GameTooltip:AddLine("Click to change", 0.6, 0.6, 0.6)
-        GameTooltip:Show()
+        CharacterMount.ShowSpecButtonTooltip(self, row.mountID)
     end)
     row.specBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
@@ -232,8 +221,9 @@ function CharacterMount.InitSettings()
                 row.pill:Show()
 
                 local enabled, total = CharacterMount.GetMountSpecCounts(entry.id)
-                row.specBtn:SetText(enabled .. "/" .. total)
-                row.specBtn:SetShown(total > 1)
+                -- The count is spec-only; mount type choices never change it.
+                row.specBtn:SetText(total > 1 and (enabled .. "/" .. total) or "...")
+                row.specBtn:SetShown(total > 1 or type(entry.id) == "number")
 
                 row:Show()
             else
