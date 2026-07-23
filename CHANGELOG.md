@@ -1,7 +1,7 @@
 ## [1.7.0] - 2026-07-23
 
 ### Added
-- Click any mount in your list or in Setup to open a 3D preview, so you can check what it looks like without mounting up. (Thanks for the suggestion Tuulani)
+- Click any mount in your list or in Setup to open a 3D preview, so you can check what it looks like without mounting up. Drag the model to spin it around, scroll to zoom. (Thanks for the suggestion Tuulani)
 - Shop mounts now show up in Setup in their own section, left unticked so you choose which ones you want. (Thanks for the suggestion Tuulani)
 - Middle-click any mount in the Blizzard mount journal to add it to your character list, or remove it if it is already there. (Thanks for the suggestion Tuulani)
 - New "Silence mount warnings" setting to turn off the chat messages that appear when you cannot mount. (Thanks for the suggestion Tuulani)

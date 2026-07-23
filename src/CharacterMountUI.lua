@@ -664,6 +664,10 @@ end
 -- Mount model preview
 -- ---------------------------------------------------------------------------
 
+local DEFAULT_CAM_SCALE = 1.4
+local MIN_CAM_SCALE = 0.7
+local MAX_CAM_SCALE = 4
+
 -- Load the live 3D mount model into a PlayerModel frame. Returns false when
 -- the mount has no usable display (spell-form entries, missing data).
 --
@@ -683,7 +687,8 @@ local function LoadMountModel(model, mountID)
         model:SetPortraitZoom(0)
         model:SetPosition(0, 0, 0)
         model:SetFacing(0.6)
-        model:SetCamDistanceScale(1.4)
+        model.camScale = DEFAULT_CAM_SCALE
+        model:SetCamDistanceScale(DEFAULT_CAM_SCALE)
     end
 
     model:ClearModel()
@@ -735,6 +740,36 @@ function CharacterMount.ShowMountPreview(mountID, anchorFrame)
         model:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -60)
         model:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
         frame.model = model
+
+        -- Left-click drag spins the model.
+        model:EnableMouse(true)
+        model:SetScript("OnMouseDown", function(self, mouseButton)
+            if mouseButton ~= "LeftButton" then return end
+            self.dragStartX = GetCursorPosition()
+            self:SetScript("OnUpdate", function(s)
+                -- The mouse can be released off the model, where OnMouseUp
+                -- never reaches us, so stop on the button state too.
+                if not IsMouseButtonDown("LeftButton") then
+                    s:SetScript("OnUpdate", nil)
+                    return
+                end
+                local x = GetCursorPosition()
+                s:SetFacing(s:GetFacing() + (x - s.dragStartX) * 0.01)
+                s.dragStartX = x
+            end)
+        end)
+        model:SetScript("OnMouseUp", function(self)
+            self:SetScript("OnUpdate", nil)
+        end)
+
+        -- Scroll to zoom.
+        model:EnableMouseWheel(true)
+        model:SetScript("OnMouseWheel", function(self, delta)
+            local scale = (self.camScale or DEFAULT_CAM_SCALE) - delta * 0.2
+            scale = math.max(MIN_CAM_SCALE, math.min(MAX_CAM_SCALE, scale))
+            self.camScale = scale
+            self:SetCamDistanceScale(scale)
+        end)
 
         CharacterMount.previewFrame = frame
     end
