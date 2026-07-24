@@ -2,6 +2,7 @@
 
 ### Added
 - New "Get Ground Macro" button in the settings panel. It puts a ground-only mount macro on your cursor, ready to drop on an action bar. Use it to summon a random ground mount even in zones where you could fly, for when you want to stay on the ground. (Thanks for the suggestion Tuulani)
+- Holiday mounts can now be limited to their event. Open a mount's options and tick "During [holiday] only" to keep seasonal mounts like Brewfest rams or the Headless Horseman's mount out of your random rotation until their holiday is running. (Thanks for the suggestion Tuulani)
 
 ### Fixed
 - A custom icon you set on the mount macro now sticks, instead of resetting to the default each time you summon.

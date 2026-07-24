@@ -119,6 +119,7 @@ local function InitDB()
     charData.exclusions     = charData.exclusions     or {}
     charData.specExclusions = charData.specExclusions or {}
     charData.mountTypes     = charData.mountTypes     or {}
+    charData.holidayOnly    = charData.holidayOnly    or {}
 
     db = charData
     CharacterMount.db = db
@@ -293,6 +294,7 @@ end
 local function ClearMountSettings(mountID)
     if db.specExclusions then db.specExclusions[mountID] = nil end
     if db.mountTypes then db.mountTypes[mountID] = nil end
+    if db.holidayOnly then db.holidayOnly[mountID] = nil end
 end
 
 -- ---------------------------------------------------------------------------
@@ -352,6 +354,36 @@ local function MountCountsAsCategory(mountID, category, mountTypeID, isSteadyFli
     return true
 end
 
+-- ---------------------------------------------------------------------------
+-- Holiday-only mounts
+-- ---------------------------------------------------------------------------
+-- Curated holiday mounts can be gated so they only enter the random pool while
+-- their holiday runs. db.holidayOnly[mountID] = true opts one in; default off.
+
+--- The holiday a mount belongs to, or nil if it isn't a holiday mount.
+function CharacterMount.GetMountHoliday(mountID)
+    return CharacterMount.MountData.GetMountHoliday(mountID)
+end
+
+function CharacterMount.IsHolidayOnly(mountID)
+    return db.holidayOnly and db.holidayOnly[mountID] == true
+end
+
+function CharacterMount.SetHolidayOnly(mountID, enabled)
+    db.holidayOnly = db.holidayOnly or {}
+    db.holidayOnly[mountID] = enabled or nil
+    CharacterMount.PreRoll()
+end
+
+--- False only for a holiday-gated mount whose holiday isn't currently running.
+--- Everything else (normal mounts, un-gated holiday mounts) is always available.
+function CharacterMount.IsMountAvailableNow(mountID)
+    if not CharacterMount.IsHolidayOnly(mountID) then return true end
+    local holiday = CharacterMount.GetMountHoliday(mountID)
+    if not holiday then return true end
+    return CharacterMount.IsHolidayActive(holiday)
+end
+
 --- Open the per-mount spec and type dropdown anchored to `anchor`.
 function CharacterMount.ShowSpecMenu(anchor, mountID)
     if not mountID or not MenuUtil or not MenuUtil.CreateContextMenu then return end
@@ -402,6 +434,19 @@ function CharacterMount.ShowSpecMenu(anchor, mountID)
             root:CreateTitle(LuckyUI.WC.danger
                 .. "Summoned when flying, but it cannot fly" .. LuckyUI.WC.reset)
         end
+
+        local holiday = CharacterMount.GetMountHoliday(mountID)
+        if holiday then
+            root:CreateDivider()
+            root:CreateCheckbox("During " .. holiday .. " only",
+                function()
+                    return CharacterMount.IsHolidayOnly(mountID)
+                end,
+                function()
+                    CharacterMount.SetHolidayOnly(mountID, not CharacterMount.IsHolidayOnly(mountID))
+                    return MenuResponse.Refresh
+                end)
+        end
     end)
 end
 
@@ -434,6 +479,16 @@ function CharacterMount.ShowSpecButtonTooltip(button, mountID)
         end
         if not any then
             GameTooltip:AddLine("Nothing selected", 0.75, 0.4, 0.4)
+        end
+
+        local holiday = CharacterMount.GetMountHoliday(mountID)
+        if holiday and CharacterMount.IsHolidayOnly(mountID) then
+            GameTooltip:AddLine(" ")
+            if CharacterMount.IsHolidayActive(holiday) then
+                GameTooltip:AddLine("During " .. holiday .. " only (active now)", 0.45, 0.85, 0.45)
+            else
+                GameTooltip:AddLine("During " .. holiday .. " only (not running)", 0.75, 0.4, 0.4)
+            end
         end
     end
 
@@ -628,6 +683,9 @@ function CharacterMount.MountRandom(forcedCategory)
         if not CharacterMount.IsMountEnabledForCurrentSpec(entry.id) then
             devLog("[SPEC SKIP] " .. tostring(entry.name)
                 .. " (disabled for current spec)")
+        elseif not CharacterMount.IsMountAvailableNow(entry.id) then
+            devLog("[HOLIDAY SKIP] " .. tostring(entry.name)
+                .. " (" .. tostring(CharacterMount.GetMountHoliday(entry.id)) .. " not running)")
         elseif not entry.spellID then
             local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
             devLog("[MOUNT CHECK] id=" .. tostring(entry.id)
@@ -770,6 +828,8 @@ local function BuildRollPool(category)
     for _, entry in ipairs(mountList) do
         local ok
         if not CharacterMount.IsMountEnabledForCurrentSpec(entry.id) then
+            ok = false
+        elseif not CharacterMount.IsMountAvailableNow(entry.id) then
             ok = false
         elseif entry.spellID then
             ok = IsSpellKnown(entry.spellID)
@@ -1141,6 +1201,26 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
             for _, line in ipairs(matched) do print(line) end
         else
             print("  /cmount sources <n> — list the mounts in one source bucket")
+        end
+    elseif lower == "holidays" then
+        -- Dev probe: which holidays does the calendar report running today, and
+        -- how does each curated HOLIDAY_MOUNTS entry resolve? Use during an event
+        -- to confirm a mount's title string matches its calendar title exactly.
+        CharacterMount.RefreshHolidays()
+        local active = CharacterMount.GetActiveHolidays()
+        print(PREFIX .. " Active holidays today:")
+        local anyActive = false
+        for title in pairs(active) do
+            print("  - " .. title)
+            anyActive = true
+        end
+        if not anyActive then print("  (none)") end
+        print(PREFIX .. " Recognised holiday mounts:")
+        for mountID, title in pairs(CharacterMount.MountData.GetHolidayMounts()) do
+            local name = C_MountJournal.GetMountInfoByID(mountID)
+            print(string.format("  [%d] %s -> %s (%s)",
+                mountID, tostring(name), title,
+                CharacterMount.IsHolidayActive(title) and "running" or "not running"))
         end
     elseif lower == "debug" then
         print(PREFIX .. " --- Debug for " .. tostring(charKey) .. " ---")

@@ -541,3 +541,57 @@ end
 function MD.GetRareMountIDs()
     return MD.RARE_MOUNTS
 end
+
+-- ---------------------------------------------------------------------------
+-- Holiday mounts. WoW exposes no mount→holiday link, so it is curated — but by
+-- name keyword, not mount ID: one "Brewfest" keyword tags every Brewfest ram
+-- and kodo, and survives new mounts being added to an existing holiday. `holiday`
+-- must match the calendar day-event title exactly (English); it is also the name
+-- shown in the UI. Verify a holiday's exact title in-game with /cmount holidays.
+--
+-- Keywords match against the mount's name (case-insensitive substring). Every
+-- current holiday mount has its holiday recognisable in its name; if a future one
+-- doesn't, add a distinctive substring here rather than reintroducing raw IDs.
+-- ---------------------------------------------------------------------------
+MD.HOLIDAY_MATCHERS = {
+    { holiday = "Brewfest",             keywords = { "Brewfest" } },
+    { holiday = "Hallow's End",         keywords = { "Headless Horseman" } },
+    { holiday = "Noblegarden",          keywords = { "Springstrider" } },
+    { holiday = "Love is in the Air",   keywords = { "Lovebird", "Love Rocket", "Heartseeker" } },
+    { holiday = "Feast of Winter Veil", keywords = { "Grumpus" } },
+    { holiday = "Call of the Scarab",   keywords = { "Qiraji War Tank" } },
+}
+
+-- mountID → holiday title, built once on first lookup (needs the journal loaded).
+local holidayByMount
+
+local function BuildHolidayCache()
+    holidayByMount = {}
+    for _, mountID in ipairs(C_MountJournal.GetMountIDs()) do
+        local name = C_MountJournal.GetMountInfoByID(mountID)
+        if name then
+            local lower = name:lower()
+            for _, matcher in ipairs(MD.HOLIDAY_MATCHERS) do
+                for _, kw in ipairs(matcher.keywords) do
+                    if lower:find(kw:lower(), 1, true) then
+                        holidayByMount[mountID] = matcher.holiday
+                        break
+                    end
+                end
+                if holidayByMount[mountID] then break end
+            end
+        end
+    end
+end
+
+--- Returns the holiday title a mount belongs to, or nil if it isn't one.
+function MD.GetMountHoliday(mountID)
+    if not holidayByMount then BuildHolidayCache() end
+    return holidayByMount[mountID]
+end
+
+--- mountID → holiday title for every recognised holiday mount (for /cmount holidays).
+function MD.GetHolidayMounts()
+    if not holidayByMount then BuildHolidayCache() end
+    return holidayByMount
+end

@@ -9,6 +9,7 @@
 
 CharacterMountHelpers.lua
 MountData.lua
+CharacterMountHolidays.lua
 CharacterMount.lua
 CharacterMountUI.lua
 CharacterMountSettings.lua
