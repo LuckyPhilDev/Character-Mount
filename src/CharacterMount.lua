@@ -533,8 +533,10 @@ local function IsCombatMountZone()
     return false
 end
 
-function CharacterMount.MountRandom()
-    devLog("MountRandom called.")
+--- @param forcedCategory string|nil  When set (e.g. GROUND), summon that
+--- category regardless of where the player is standing. nil = eligible category.
+function CharacterMount.MountRandom(forcedCategory)
+    devLog("MountRandom called." .. (forcedCategory and (" forced=" .. forcedCategory) or ""))
 
     -- State diagnostics
     devLog("[STATE] IsMounted=" .. tostring(IsMounted())
@@ -589,8 +591,8 @@ function CharacterMount.MountRandom()
         return
     end
 
-    local category = CharacterMount_GetEligibleMountCategory()
-    devLog("Eligible category: " .. category)
+    local category = forcedCategory or CharacterMount_GetEligibleMountCategory()
+    devLog("Category: " .. category .. (forcedCategory and " (forced)" or " (eligible)"))
 
     local mountList = CharacterMount.GetEffectiveMountList()
     devLog("Effective list: " .. #mountList .. " mounts.")
@@ -730,10 +732,23 @@ end
 
 local MACRO_NAME = "CharMount"
 local MACRO_ICON = "136103"
+local GROUND_MACRO_NAME = "CharMountGround"
+local GROUND_MACRO_ICON = "ability_mount_whitetiger"
+
+-- Every CharMount macro that can exist. All end their body with /cmount roll,
+-- which pre-rolls every one of them; only the summon verb and the category the
+-- roll is forced to differ. category nil means "use the eligible category for
+-- where the player is standing" (the normal macro); GROUND forces ground mounts
+-- regardless of whether flying is allowed.
+local MACRO_SPECS = {
+    { name = MACRO_NAME,        icon = MACRO_ICON,        mountCmd = "mount",       category = nil },
+    { name = GROUND_MACRO_NAME, icon = GROUND_MACRO_ICON, mountCmd = "groundmount", category = CharacterMount_MOUNT_TYPE.GROUND },
+}
 
 --- Build macro body for a given pre-rolled result.
 --- @param spellName string|nil  If non-nil, the macro casts this spell form.
-function CharacterMount.BuildMacroBody(spellName)
+--- @param mountCmd string|nil   Summon verb for journal mounts (default "mount").
+function CharacterMount.BuildMacroBody(spellName, mountCmd)
     if spellName then
         -- Spell form: /cast handles the protected action, /cmount roll
         -- pre-rolls for the next click.
@@ -744,21 +759,13 @@ function CharacterMount.BuildMacroBody(spellName)
     -- Journal mount: /cmount mount summons via SummonByID. In combat that is
     -- blocked except in encounters where Blizzard allows mounting; MountRandom
     -- checks the zone and summons there too.
-    return "/cmount mount\n/cmount roll"
+    return "/cmount " .. (mountCmd or "mount") .. "\n/cmount roll"
 end
 
---- Pre-roll: randomly pick the next mount/form from the usable pool
---- and rewrite the macro so the next click executes it.
-function CharacterMount.PreRoll()
-    if InCombatLockdown() then return end
-
-    local idx = GetMacroIndexByName(MACRO_NAME)
-    if not idx or idx == 0 then return end
-
+--- Build the usable/preferred pools for a given category (shared by PreRoll).
+--- @param category string  Eligible category to prefer, or forced category.
+local function BuildRollPool(category)
     local mountList = CharacterMount.GetEffectiveMountList()
-    local category  = CharacterMount_GetEligibleMountCategory()
-
-    -- Build usable + preferred pools (same logic as MountRandom)
     local usable, preferred = {}, {}
     for _, entry in ipairs(mountList) do
         local ok
@@ -786,58 +793,78 @@ function CharacterMount.PreRoll()
             end
         end
     end
-
-    local pool = #preferred > 0 and preferred or usable
-    if #pool == 0 then
-        devLog("[ROLL] No usable mounts for next click.")
-        return
-    end
-
-    local pick = pool[math.random(#pool)]
-    local body
-    if pick.spellID then
-        devLog("[ROLL] Next click → spell: " .. pick.name)
-        body = CharacterMount.BuildMacroBody(pick.name)
-    else
-        devLog("[ROLL] Next click → mount: " .. pick.name)
-        body = CharacterMount.BuildMacroBody(nil)
-    end
-
-    EditMacro(idx, MACRO_NAME, MACRO_ICON, body)
+    return #preferred > 0 and preferred or usable
 end
 
-function CharacterMount.CreateMacro()
+--- Pre-roll every existing CharMount macro: pick each one's next mount/form and
+--- rewrite it so the next click executes it. The normal macro rolls against the
+--- eligible category; the ground macro forces GROUND.
+function CharacterMount.PreRoll()
+    if InCombatLockdown() then return end
+
+    local eligible = CharacterMount_GetEligibleMountCategory()
+
+    for _, spec in ipairs(MACRO_SPECS) do
+        local idx = GetMacroIndexByName(spec.name)
+        if idx and idx > 0 then
+            local pool = BuildRollPool(spec.category or eligible)
+            if #pool == 0 then
+                devLog("[ROLL] " .. spec.name .. ": no usable mounts for next click.")
+            else
+                local pick = pool[math.random(#pool)]
+                local body
+                if pick.spellID then
+                    devLog("[ROLL] " .. spec.name .. " next click → spell: " .. pick.name)
+                    body = CharacterMount.BuildMacroBody(pick.name, spec.mountCmd)
+                else
+                    devLog("[ROLL] " .. spec.name .. " next click → mount: " .. pick.name)
+                    body = CharacterMount.BuildMacroBody(nil, spec.mountCmd)
+                end
+                -- ponytail: nil name/icon => keep the user's chosen icon (and any
+                -- rename); only the body is ours to rewrite each roll.
+                EditMacro(idx, nil, nil, body)
+            end
+        end
+    end
+end
+
+local function CreateMacroFromSpec(spec)
     if InCombatLockdown() then
         print(PREFIX .. " Cannot create macro during combat.")
         return
     end
 
     -- Start with journal-mount body; first click will mount + pre-roll.
-    local body = CharacterMount.BuildMacroBody(nil)
-    local idx = GetMacroIndexByName(MACRO_NAME)
+    local body = CharacterMount.BuildMacroBody(nil, spec.mountCmd)
+    local idx = GetMacroIndexByName(spec.name)
     if idx and idx > 0 then
-        EditMacro(idx, MACRO_NAME, MACRO_ICON, body)
-        print(PREFIX .. " Macro '" .. MACRO_NAME .. "' updated. Drag it to your action bar.")
-        PickupMacro(MACRO_NAME)
+        -- ponytail: nil name/icon => don't reset a user's custom icon/rename on re-create.
+        EditMacro(idx, nil, nil, body)
+        print(PREFIX .. " Macro '" .. spec.name .. "' updated. Drag it to your action bar.")
+        PickupMacro(spec.name)
         return
     end
 
-    local macroID = CreateMacro(MACRO_NAME, MACRO_ICON, body, nil)
+    local macroID = CreateMacro(spec.name, spec.icon, body, nil)
     if macroID then
-        print(PREFIX .. " Created macro '" .. MACRO_NAME .. "'. Drag it to your action bar.")
-        PickupMacro(MACRO_NAME)
+        print(PREFIX .. " Created macro '" .. spec.name .. "'. Drag it to your action bar.")
+        PickupMacro(spec.name)
     else
         print(PREFIX .. " Cannot create macro — macro limit reached.")
     end
 end
 
+function CharacterMount.CreateMacro()
+    CreateMacroFromSpec(MACRO_SPECS[1])
+end
+
+function CharacterMount.CreateGroundMacro()
+    CreateMacroFromSpec(MACRO_SPECS[2])
+end
+
 function CharacterMount.UpdateMacro()
-    if InCombatLockdown() then return end
-    local idx = GetMacroIndexByName(MACRO_NAME)
-    if idx and idx > 0 then
-        -- Re-roll so the macro reflects current mount list.
-        CharacterMount.PreRoll()
-    end
+    -- Re-roll every existing macro so they reflect the current mount list.
+    CharacterMount.PreRoll()
 end
 
 -- ---------------------------------------------------------------------------
@@ -999,8 +1026,12 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         end
     elseif lower == "macro" then
         CharacterMount.CreateMacro()
+    elseif lower == "groundmacro" then
+        CharacterMount.CreateGroundMacro()
     elseif lower == "mount" then
         CharacterMount.MountRandom()
+    elseif lower == "groundmount" then
+        CharacterMount.MountRandom(CharacterMount_MOUNT_TYPE.GROUND)
     elseif lower == "roll" then
         CharacterMount.PreRoll()
     elseif lower == "reset" then
@@ -1145,6 +1176,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         print("  /cmount add <id>     — add mount by ID")
         print("  /cmount remove <name|id>")
         print("  /cmount macro        — create action bar macro")
+        print("  /cmount groundmacro  — create ground-only macro")
         print("  /cmount mount        — mount now")
         print("  /cmount settings         — open settings panel")
         print("  /cmount reset            — clear all exclusions")

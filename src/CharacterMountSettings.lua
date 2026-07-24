@@ -133,6 +133,21 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    ---------------------------------------------------------------------------
+    -- Ground-only macro
+    ---------------------------------------------------------------------------
+    panel:Section("Ground Macro")
+
+    panel:Button({
+        label   = "Get Ground Macro",
+        desc    = "Puts a ground-only mount macro on your cursor. Drop it on an action bar to summon a random ground mount, even in flying zones.",
+        tooltip = "Creates a macro that always rolls a ground mount, then places it on your cursor ready to drop onto a bar.",
+        width   = 160,
+        onClick = function()
+            CharacterMount.CreateGroundMacro()
+            HideUIPanel(SettingsPanel)
+        end,
+    })
 
     ---------------------------------------------------------------------------
     -- Mount list (custom section below the builder controls)

@@ -12,6 +12,7 @@
 - **Mount preview**: click any mount in your list or in the setup wizard to open a 3D preview window, then drag the model to spin it around and scroll to zoom. Handy when you cannot remember what a mount looks like.
 - **Spell form support**: Druid Travel Form, Dracthyr Soar, and Worgen Running Wild are treated as mounts and randomised alongside journal mounts.
 - **Random summoning**: click the macro to summon a random mount from your list, automatically filtered by context (ground, flying, or water).
+- **Ground-only macro**: a "Get Ground Macro" button in settings puts a second macro on your cursor that always summons a ground mount, even in zones where you could fly. Drop it on an action bar for when you want to stay on the ground.
 - **Combat mounting**: the macro also works mid-combat in the rare encounters where the game allows it, such as Tindral Sageswift, Dimensius, and The Dawnbreaker.
 - **Mount Journal integration**: Add and remove mounts from the list from the mount journal, with a button on the selected mount or a middle-click on any mount in the list.
 - **Search the list**: a search box at the top of the mount list filters your mounts by name as you type, with the header showing how many match.
@@ -45,7 +46,9 @@ You can re-run the onboarding at any time via the **Setup** button in the mount 
 | `/cmount` | Open or close the mount list UI |
 | `/cmount settings` | Open the settings panel |
 | `/cmount macro` | Create or update the action bar macro |
+| `/cmount groundmacro` | Create or update a ground-only action bar macro |
 | `/cmount mount` | Summon a random mount from your list |
+| `/cmount groundmount` | Summon a random ground mount |
 | `/cmount add <name or id>` | Add a mount by name (partial match) or ID |
 | `/cmount remove <name or id>` | Remove a mount by name or ID |
 | `/cmount reset` | Clear all exclusions and per-mount options |
