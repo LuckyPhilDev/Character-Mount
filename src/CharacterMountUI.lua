@@ -514,6 +514,8 @@ function CharacterMount.RefreshUI()
         end
     end
 
+    table.sort(activeList, function(a, b) return a.name < b.name end)
+
     -- -----------------------------------------------------------------------
     -- 1. Active rows (pool grows dynamically if the list exceeds capacity)
     -- -----------------------------------------------------------------------

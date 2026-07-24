@@ -50,9 +50,29 @@ function CharacterMount.RefreshHolidays()
     Rebuild()
 end
 
---- Is a holiday (by its exact calendar title) running right now?
+-- Dev-only mock overrides: title -> true. Honoured by IsHolidayActive only while
+-- debug mode is on, so gating can be previewed out of season. Not saved.
+local mockActive = {}
+
+--- Toggle the mock for a holiday title. Returns the new state (true = mocked on).
+function CharacterMount.ToggleMockHoliday(title)
+    if mockActive[title] then mockActive[title] = nil else mockActive[title] = true end
+    return mockActive[title] == true
+end
+
+--- Is a holiday's mock currently set? (Independent of debug mode.)
+function CharacterMount.IsHolidayMocked(title)
+    return mockActive[title] == true
+end
+
+--- Is a holiday (by its exact calendar title) running right now? A mock counts
+--- only while debug mode is active.
 function CharacterMount.IsHolidayActive(title)
-    return title ~= nil and activeTitles[title] == true
+    if title == nil then return false end
+    if CharacterMountDB and CharacterMountDB.debugMode and mockActive[title] then
+        return true
+    end
+    return activeTitles[title] == true
 end
 
 --- The set of currently-running holiday titles (read-only).

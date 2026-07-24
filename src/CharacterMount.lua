@@ -181,18 +181,11 @@ function CharacterMount.GetEffectiveMountList()
     end
 
     for key, source in pairs(db.additions) do
-        devLog("[LIST] Processing addition key=" .. tostring(key)
-            .. " (type=" .. type(key) .. ") source=" .. tostring(source)
-            .. " seen=" .. tostring(seen[key])
-            .. " excluded=" .. tostring(db.exclusions[key]))
         if not seen[key] and not db.exclusions[key] then
             -- Check for spell-based form entries (keyed as "spell:<id>")
             local spellID = type(key) == "string" and tonumber(key:match("^spell:(%d+)$"))
-            devLog("[LIST] Parsed spellID=" .. tostring(spellID))
             if spellID then
                 local spellInfo = C_Spell.GetSpellInfo(spellID)
-                devLog("[LIST] C_Spell.GetSpellInfo(" .. spellID .. ") → "
-                    .. tostring(spellInfo and spellInfo.name or "nil"))
                 if spellInfo then
                     seen[key] = true
                     local srcTag = (type(source) == "string") and source or "class_form"
@@ -355,33 +348,94 @@ local function MountCountsAsCategory(mountID, category, mountTypeID, isSteadyFli
 end
 
 -- ---------------------------------------------------------------------------
--- Holiday-only mounts
+-- Holiday-gated mounts
 -- ---------------------------------------------------------------------------
--- Curated holiday mounts can be gated so they only enter the random pool while
--- their holiday runs. db.holidayOnly[mountID] = true opts one in; default off.
+-- A gated mount only enters the random pool while one of its holidays runs.
+-- db.holidayOnly[mountID] is the set of holiday titles it is gated to, e.g.
+-- { ["Brewfest"] = true }. No entry means the mount is always available.
 
---- The holiday a mount belongs to, or nil if it isn't a holiday mount.
+--- The holiday a mount belongs to by name, or nil if it isn't a holiday mount.
 function CharacterMount.GetMountHoliday(mountID)
     return CharacterMount.MountData.GetMountHoliday(mountID)
 end
 
-function CharacterMount.IsHolidayOnly(mountID)
-    return db.holidayOnly and db.holidayOnly[mountID] == true
+--- The mount's holiday-gate set, or nil if ungated. Upgrades the legacy boolean
+--- `true` (gate to the auto-detected holiday) to the set form in place.
+local function HolidayGateSet(mountID)
+    local gate = db.holidayOnly and db.holidayOnly[mountID]
+    if gate == nil then return nil end
+    if gate == true then
+        local auto = CharacterMount.GetMountHoliday(mountID)
+        gate = auto and { [auto] = true } or nil
+        db.holidayOnly[mountID] = gate
+    end
+    return gate
 end
 
-function CharacterMount.SetHolidayOnly(mountID, enabled)
+function CharacterMount.GetHolidayGates(mountID)
+    return HolidayGateSet(mountID)
+end
+
+function CharacterMount.IsHolidayGated(mountID, title)
+    local set = HolidayGateSet(mountID)
+    return set ~= nil and set[title] == true
+end
+
+function CharacterMount.SetHolidayGate(mountID, title, enabled)
     db.holidayOnly = db.holidayOnly or {}
-    db.holidayOnly[mountID] = enabled or nil
+    local set = HolidayGateSet(mountID) or {}
+    set[title] = enabled or nil
+    db.holidayOnly[mountID] = next(set) and set or nil
     CharacterMount.PreRoll()
 end
 
---- False only for a holiday-gated mount whose holiday isn't currently running.
---- Everything else (normal mounts, un-gated holiday mounts) is always available.
-function CharacterMount.IsMountAvailableNow(mountID)
-    if not CharacterMount.IsHolidayOnly(mountID) then return true end
+--- Quick "during its own holiday only" toggle for auto-detected holiday mounts.
+function CharacterMount.IsHolidayOnly(mountID)
     local holiday = CharacterMount.GetMountHoliday(mountID)
-    if not holiday then return true end
-    return CharacterMount.IsHolidayActive(holiday)
+    return holiday ~= nil and CharacterMount.IsHolidayGated(mountID, holiday)
+end
+
+function CharacterMount.SetHolidayOnly(mountID, enabled)
+    local holiday = CharacterMount.GetMountHoliday(mountID)
+    if holiday then CharacterMount.SetHolidayGate(mountID, holiday, enabled) end
+end
+
+--- False only for a gated mount none of whose holidays are currently running.
+--- Everything else (ungated mounts) is always available.
+function CharacterMount.IsMountAvailableNow(mountID)
+    local set = HolidayGateSet(mountID)
+    if not set then return true end
+    for title in pairs(set) do
+        if CharacterMount.IsHolidayActive(title) then return true end
+    end
+    return false
+end
+
+-- A mount whose holiday is running right now rolls at this multiple of a normal
+-- mount's weight, so seasonal mounts surface more often during their event.
+local HOLIDAY_ROLL_WEIGHT = 2
+
+local function EntryRollWeight(entry)
+    local holiday = entry.id and CharacterMount.GetMountHoliday(entry.id)
+    if holiday and CharacterMount.IsHolidayActive(holiday) then
+        return HOLIDAY_ROLL_WEIGHT
+    end
+    return 1
+end
+
+--- Pick one entry from a pool, weighting a mount whose holiday is live now at
+--- HOLIDAY_ROLL_WEIGHT× a normal mount. Returns nil for an empty pool.
+local function WeightedPick(pool)
+    local n = #pool
+    if n == 0 then return nil end
+    local total = 0
+    for i = 1, n do total = total + EntryRollWeight(pool[i]) end
+    local r = math.random() * total
+    for i = 1, n do
+        r = r - EntryRollWeight(pool[i])
+        if r <= 0 then return pool[i] end
+    end
+    return pool[n]
 end
 
 --- Open the per-mount spec and type dropdown anchored to `anchor`.
@@ -435,17 +489,33 @@ function CharacterMount.ShowSpecMenu(anchor, mountID)
                 .. "Summoned when flying, but it cannot fly" .. LuckyUI.WC.reset)
         end
 
-        local holiday = CharacterMount.GetMountHoliday(mountID)
-        if holiday then
+        if CharacterMountDB.holidayAssignEnabled then
             root:CreateDivider()
-            root:CreateCheckbox("During " .. holiday .. " only",
-                function()
-                    return CharacterMount.IsHolidayOnly(mountID)
-                end,
-                function()
-                    CharacterMount.SetHolidayOnly(mountID, not CharacterMount.IsHolidayOnly(mountID))
-                    return MenuResponse.Refresh
-                end)
+            local sub = root:CreateButton("Only during a holiday")
+            for _, title in ipairs(CharacterMount.MountData.GetHolidayList()) do
+                sub:CreateCheckbox(title,
+                    function()
+                        return CharacterMount.IsHolidayGated(mountID, title)
+                    end,
+                    function()
+                        CharacterMount.SetHolidayGate(mountID, title,
+                            not CharacterMount.IsHolidayGated(mountID, title))
+                        return MenuResponse.Refresh
+                    end)
+            end
+        else
+            local holiday = CharacterMount.GetMountHoliday(mountID)
+            if holiday then
+                root:CreateDivider()
+                root:CreateCheckbox("During " .. holiday .. " only",
+                    function()
+                        return CharacterMount.IsHolidayOnly(mountID)
+                    end,
+                    function()
+                        CharacterMount.SetHolidayOnly(mountID, not CharacterMount.IsHolidayOnly(mountID))
+                        return MenuResponse.Refresh
+                    end)
+            end
         end
     end)
 end
@@ -481,13 +551,15 @@ function CharacterMount.ShowSpecButtonTooltip(button, mountID)
             GameTooltip:AddLine("Nothing selected", 0.75, 0.4, 0.4)
         end
 
-        local holiday = CharacterMount.GetMountHoliday(mountID)
-        if holiday and CharacterMount.IsHolidayOnly(mountID) then
+        local gates = CharacterMount.GetHolidayGates(mountID)
+        if gates and next(gates) then
             GameTooltip:AddLine(" ")
-            if CharacterMount.IsHolidayActive(holiday) then
-                GameTooltip:AddLine("During " .. holiday .. " only (active now)", 0.45, 0.85, 0.45)
-            else
-                GameTooltip:AddLine("During " .. holiday .. " only (not running)", 0.75, 0.4, 0.4)
+            for title in pairs(gates) do
+                if CharacterMount.IsHolidayActive(title) then
+                    GameTooltip:AddLine("Only during " .. title .. " (active now)", 0.45, 0.85, 0.45)
+                else
+                    GameTooltip:AddLine("Only during " .. title .. " (not running)", 0.75, 0.4, 0.4)
+                end
             end
         end
     end
@@ -719,14 +791,14 @@ function CharacterMount.MountRandom(forcedCategory)
         devLog("Matching '" .. category .. "': " .. #preferred)
 
         local pool = #preferred > 0 and preferred or usable
-        local pick = pool[math.random(#pool)]
+        local pick = WeightedPick(pool)
         devLog("Picked from pool of " .. #pool .. ": " .. pick.name)
         C_MountJournal.SummonByID(pick.id)
         return
     end
 
     if #usable > 0 then
-        local pick = usable[math.random(#usable)]
+        local pick = WeightedPick(usable)
         devLog("Picked (no category filter): " .. pick.name)
         C_MountJournal.SummonByID(pick.id)
         return
@@ -871,7 +943,7 @@ function CharacterMount.PreRoll()
             if #pool == 0 then
                 devLog("[ROLL] " .. spec.name .. ": no usable mounts for next click.")
             else
-                local pick = pool[math.random(#pool)]
+                local pick = WeightedPick(pool)
                 local body
                 if pick.spellID then
                     devLog("[ROLL] " .. spec.name .. " next click → spell: " .. pick.name)
@@ -1221,6 +1293,28 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
             print(string.format("  [%d] %s -> %s (%s)",
                 mountID, tostring(name), title,
                 CharacterMount.IsHolidayActive(title) and "running" or "not running"))
+        end
+    elseif lower == "mockholiday" or lower:sub(1, 12) == "mockholiday " then
+        -- Dev: fake a holiday as running so gating can be tested out of season.
+        -- Effective only while debug mode is on (see IsHolidayActive).
+        local holidays = CharacterMount.MountData.GetHolidayList()
+        local n = tonumber(msg:sub(13):match("^%s*(.-)%s*$"))
+        if n and holidays[n] then
+            local title = holidays[n]
+            local on = CharacterMount.ToggleMockHoliday(title)
+            print(string.format("%s Mock holiday %s: %s", PREFIX, title, on and "ON" or "OFF"))
+            if on and not CharacterMountDB.debugMode then
+                print("  Enable Debug mode in settings for the mock to take effect.")
+            end
+            CharacterMount.PreRoll()
+        else
+            print(PREFIX .. " Mock holidays (debug mode "
+                .. (CharacterMountDB.debugMode and "on" or "off") .. "):")
+            for i, title in ipairs(holidays) do
+                local mark = CharacterMount.IsHolidayMocked(title) and "  <mock on>" or ""
+                print(string.format("  [%d] %s%s", i, title, mark))
+            end
+            print("  /cmount mockholiday <n> — toggle the mock for that holiday")
         end
     elseif lower == "debug" then
         print(PREFIX .. " --- Debug for " .. tostring(charKey) .. " ---")

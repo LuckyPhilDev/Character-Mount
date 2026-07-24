@@ -133,6 +133,15 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    panel:Toggle({
+        label    = "Assign mounts to holidays",
+        desc     = "Adds an \"Only during a holiday\" submenu to each mount's options, so you can limit any mount to a chosen in-game holiday.",
+        checked  = CharacterMountDB.holidayAssignEnabled or false,
+        onToggle = function(checked)
+            CharacterMountDB.holidayAssignEnabled = checked
+        end,
+    })
+
     ---------------------------------------------------------------------------
     -- Ground-only macro
     ---------------------------------------------------------------------------

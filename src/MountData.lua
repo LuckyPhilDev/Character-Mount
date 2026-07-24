@@ -595,3 +595,27 @@ function MD.GetHolidayMounts()
     if not holidayByMount then BuildHolidayCache() end
     return holidayByMount
 end
+
+-- Static holiday list for manually assigning any mount to a holiday. Titles must
+-- match the calendar day-event title exactly (English), same rule as the matchers
+-- above. Roughly calendar order. Variable-title events (such as the yearly
+-- Anniversary) are left out because their title changes and would never match.
+MD.HOLIDAYS = {
+    "Lunar Festival",
+    "Love is in the Air",
+    "Noblegarden",
+    "Children's Week",
+    "Midsummer Fire Festival",
+    "Pirates' Day",
+    "Brewfest",
+    "Hallow's End",
+    "Day of the Dead",
+    "Feast of Winter Veil",
+    "Call of the Scarab",
+    "Darkmoon Faire",
+}
+
+--- Returns the static list of holiday titles for the assignment menu.
+function MD.GetHolidayList()
+    return MD.HOLIDAYS
+end
