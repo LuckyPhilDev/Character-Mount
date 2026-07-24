@@ -4,7 +4,8 @@
 
 CharacterMount = CharacterMount or {}
 
-local C  = LuckyUI.C
+local R = LuckySettings.Rich.Theme
+local R_FONT = LuckySettings.Rich.Font
 
 local ROW_HEIGHT = 26
 local ROW_GAP    = 2
@@ -22,18 +23,21 @@ local function CreateSettingsRow(parent, index)
 
     local hl = row:CreateTexture(nil, "HIGHLIGHT")
     hl:SetAllPoints()
-    hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
+    hl:SetColorTexture(R.accent[1], R.accent[2], R.accent[3], 0.06)
 
     row.icon = row:CreateTexture(nil, "ARTWORK")
     row.icon:SetSize(20, 20)
     row.icon:SetPoint("LEFT", 4, 0)
 
     -- Remove button
-    row.removeBtn = LuckyUI.CreateButton(row, "\195\151", 24, 22, "secondary")
+    row.removeBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    row.removeBtn:SetSize(24, 22)
+    row.removeBtn:SetText("\195\151")
     row.removeBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 
     -- Per-spec availability button (opens the shared spec dropdown)
-    row.specBtn = LuckyUI.CreateButton(row, "", 34, 22, "secondary")
+    row.specBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    row.specBtn:SetSize(34, 22)
     row.specBtn:SetPoint("RIGHT", row.removeBtn, "LEFT", -4, 0)
     row.specBtn:SetScript("OnClick", function()
         CharacterMount.ShowSpecMenu(row.specBtn, row.mountID)
@@ -44,10 +48,10 @@ local function CreateSettingsRow(parent, index)
     row.specBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     row.nameLabel = row:CreateFontString(nil, "OVERLAY")
-    row.nameLabel:SetFont(LuckyUI.BODY_FONT, 12)
+    row.nameLabel:SetFont(R_FONT, 12, "")
     row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
     row.nameLabel:SetJustifyH("LEFT")
-    row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
+    row.nameLabel:SetTextColor(R.text[1], R.text[2], R.text[3])
 
     -- Source pill
     row.pill = CreateFrame("Frame", nil, row)
@@ -58,7 +62,7 @@ local function CreateSettingsRow(parent, index)
     row.pillBg:SetColorTexture(1, 1, 1, 0.15)
 
     row.sourceLabel = row.pill:CreateFontString(nil, "OVERLAY")
-    row.sourceLabel:SetFont(LuckyUI.BODY_FONT, 10)
+    row.sourceLabel:SetFont(R_FONT, 10, "")
     row.sourceLabel:SetPoint("CENTER", 0, 0)
     row.sourceLabel:SetJustifyH("CENTER")
 
@@ -72,20 +76,19 @@ function CharacterMount.InitSettings()
     local db = CharacterMount.db
     if not db then return end
 
-    local panel = LuckySettings:NewPanel("Lucky's Character Mount")
+    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount")
     CharacterMount.settingsCategory = panel.category
 
-    -- Options
-    panel:Toggle({
+    local general = panel:Group("General")
+    general:Toggle({
         label    = "Debug mode",
         desc     = "Print detailed mount selection diagnostics to chat.",
         checked  = CharacterMountDB.debugMode or false,
-        gap      = 16,
         onToggle = function(checked) CharacterMountDB.debugMode = checked end,
     })
 
     local minimapState = CharacterMountDB.minimap or {}
-    panel:Toggle({
+    general:Toggle({
         label    = "Minimap button",
         desc     = "Show the Character Mount button on the minimap.",
         checked  = not minimapState.hide,
@@ -96,7 +99,17 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    panel:Toggle({
+    general:Toggle({
+        label    = "Silence mount warnings",
+        desc     = "Stop chat messages when you cannot mount, such as in combat or indoors.",
+        checked  = CharacterMountDB.quietMountWarnings or false,
+        onToggle = function(checked)
+            CharacterMountDB.quietMountWarnings = checked
+        end,
+    })
+
+    local mountBehavior = panel:Group("Mount behavior")
+    mountBehavior:Toggle({
         label    = "Allow dismount while flying",
         desc     = "When enabled, pressing the mount macro mid-air will dismount you.",
         checked  = CharacterMountDB.allowFlyingDismount or false,
@@ -106,16 +119,7 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    panel:Toggle({
-        label    = "Silence mount warnings",
-        desc     = "Stop chat messages when you cannot mount, such as in combat or indoors.",
-        checked  = CharacterMountDB.quietMountWarnings or false,
-        onToggle = function(checked)
-            CharacterMountDB.quietMountWarnings = checked
-        end,
-    })
-
-    panel:Toggle({
+    mountBehavior:Toggle({
         label    = "Prompt on New Mount",
         desc     = "Show a dialog asking to add a newly unlocked mount to your character list.",
         checked  = CharacterMountDB.autoPromptNewMount ~= false,
@@ -124,7 +128,7 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    panel:Toggle({
+    mountBehavior:Toggle({
         label    = "Show 3D mount preview",
         desc     = "Display a live 3D model of the mount next to the new-mount prompt.",
         checked  = CharacterMountDB.showMountPreview ~= false,
@@ -133,7 +137,7 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    panel:Toggle({
+    mountBehavior:Toggle({
         label    = "Assign mounts to holidays",
         desc     = "Adds an \"Only during a holiday\" submenu to each mount's options, so you can limit any mount to a chosen in-game holiday.",
         checked  = CharacterMountDB.holidayAssignEnabled or false,
@@ -142,12 +146,8 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    ---------------------------------------------------------------------------
-    -- Ground-only macro
-    ---------------------------------------------------------------------------
-    panel:Section("Ground Macro")
-
-    panel:Button({
+    local macros = panel:Group("Macros")
+    macros:Button({
         label   = "Get Ground Macro",
         desc    = "Puts a ground-only mount macro on your cursor. Drop it on an action bar to summon a random ground mount, even in flying zones.",
         tooltip = "Creates a macro that always rolls a ground mount, then places it on your cursor ready to drop onto a bar.",
@@ -158,33 +158,29 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    ---------------------------------------------------------------------------
-    -- Mount list (custom section below the builder controls)
-    ---------------------------------------------------------------------------
-    panel:Section("Mount List")
+    local mountListGroup = panel:Group("Mount List")
+    mountListGroup:Button({
+        label   = "Open Mount Journal",
+        desc    = "Open the Mount Journal to add or remove mounts from your character list.",
+        width   = 140,
+        onClick = function()
+            HideUIPanel(SettingsPanel)
+            C_Timer.After(0, function() ToggleCollectionsJournal(1) end)
+        end,
+    })
 
-    local content = panel.content
-    local anchor  = panel.lastAnchor
-
-    -- Open Mount Journal button (next to heading)
-    local journalBtn = LuckyUI.CreateButton(content, "Open Mount Journal", 140, 22, "secondary")
-    journalBtn:SetPoint("LEFT", anchor, "RIGHT", 12, 0)
-    journalBtn:SetScript("OnClick", function()
-        HideUIPanel(SettingsPanel)
-        C_Timer.After(0, function() ToggleCollectionsJournal(1) end)
-    end)
+    local content = mountListGroup:Fill()
 
     -- Mount count
     local mountCount = content:CreateFontString(nil, "OVERLAY")
-    mountCount:SetFont(LuckyUI.BODY_FONT, 11)
-    mountCount:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-    mountCount:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -4)
+    mountCount:SetFont(R_FONT, 11, "")
+    mountCount:SetTextColor(R.textDim[1], R.textDim[2], R.textDim[3])
+    mountCount:SetPoint("TOPLEFT", 4, -4)
 
-    -- Scroll frame for mount list
+    -- Scroll content for the mount list
     local listContainer = CreateFrame("Frame", nil, content)
-    listContainer:SetPoint("TOPLEFT", mountCount, "BOTTOMLEFT", 0, -8)
-    listContainer:SetPoint("RIGHT", content, "RIGHT", -16, 0)
-    listContainer:SetHeight(INITIAL_POOL * (ROW_HEIGHT + ROW_GAP))
+    listContainer:SetPoint("TOPLEFT", content, "TOPLEFT", 4, -30)
+    listContainer:SetPoint("TOPRIGHT", content, "TOPRIGHT", -4, -30)
 
     -- Pre-allocate mount rows
     local rowPool = {}
@@ -228,9 +224,9 @@ function CharacterMount.InitSettings()
                 row.icon:SetDesaturated(not activeForSpec)
                 row.nameLabel:SetText(entry.name)
                 if activeForSpec then
-                    row.nameLabel:SetTextColor(C.textLight[1], C.textLight[2], C.textLight[3])
+                    row.nameLabel:SetTextColor(R.text[1], R.text[2], R.text[3])
                 else
-                    row.nameLabel:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+                    row.nameLabel:SetTextColor(R.textDim[1], R.textDim[2], R.textDim[3])
                 end
 
                 local sl  = CharacterMount.SourceLabel[entry.source] or ""
@@ -255,10 +251,19 @@ function CharacterMount.InitSettings()
             end
         end
 
-        listContainer:SetHeight(math.max(100, #mountList * (ROW_HEIGHT + ROW_GAP)))
+        local listHeight = math.max(100, #mountList * (ROW_HEIGHT + ROW_GAP))
+        listContainer:SetHeight(listHeight)
+        content:SetHeight(listHeight + 30)
     end
 
-    panel.panel:HookScript("OnShow", function()
+    panel:OnOpen(function()
+        general.byLabel["Debug mode"].checkbox:SetChecked(CharacterMountDB.debugMode or false)
+        general.byLabel["Minimap button"].checkbox:SetChecked(not (CharacterMountDB.minimap or {}).hide)
+        general.byLabel["Silence mount warnings"].checkbox:SetChecked(CharacterMountDB.quietMountWarnings or false)
+        mountBehavior.byLabel["Allow dismount while flying"].checkbox:SetChecked(CharacterMountDB.allowFlyingDismount or false)
+        mountBehavior.byLabel["Prompt on New Mount"].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
+        mountBehavior.byLabel["Show 3D mount preview"].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
+        mountBehavior.byLabel["Assign mounts to holidays"].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
         RefreshMountList()
     end)
 end
