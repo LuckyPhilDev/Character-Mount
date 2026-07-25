@@ -1352,6 +1352,15 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
                 mountID, tostring(name), title,
                 CharacterMount.IsHolidayActive(title) and "running" or "not running"))
         end
+    elseif lower == "calendar" or lower:sub(1, 9) == "calendar " then
+        -- Dev probe: every event in a month with its calendarType and exact
+        -- title. Micro-holidays and bonus events only show up in the month they
+        -- run, so pass an offset to look ahead for one that is out of season.
+        CharacterMount.DumpMonthEvents(tonumber(msg:sub(10)) or 0)
+    elseif lower == "calendarscan" then
+        -- Dev probe: the distinct titles of every event in the coming year, which
+        -- is the raw material for MountData.HOLIDAYS.
+        CharacterMount.ScanYearEvents()
     elseif lower == "mockholiday" or lower:sub(1, 12) == "mockholiday " then
         -- Dev: fake a holiday as running so gating can be tested out of season.
         -- Effective only while debug mode is on (see IsHolidayActive).

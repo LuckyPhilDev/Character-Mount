@@ -50,6 +50,87 @@ function CharacterMount.RefreshHolidays()
     Rebuild()
 end
 
+local function DumpViewedMonth()
+    local info = C_Calendar.GetMonthInfo(0)
+    if not info then return end
+    print(string.format("Character Mount calendar %d-%02d:", info.year, info.month))
+    for day = 1, info.numDays do
+        for i = 1, (C_Calendar.GetNumDayEvents(0, day) or 0) do
+            local e = C_Calendar.GetDayEvent(0, day, i)
+            -- Raid resets and lockouts crowd out the events we care about.
+            if e and e.calendarType ~= "RAID_LOCKOUT" and e.calendarType ~= "RAID_RESET" then
+                print(string.format("  %02d  %-9s %-8s %s",
+                    day, tostring(e.calendarType), tostring(e.sequenceType), tostring(e.title)))
+            end
+        end
+    end
+end
+
+--- Dev probe: print every calendar event in the month `monthsAhead` from today,
+--- with its calendarType and exact title. Use it to read the title string of a
+--- micro-holiday or bonus event before adding it to MountData.HOLIDAYS.
+--- Browsing another month moves the player's calendar view, which is why this is
+--- dev-only and prints a warning.
+function CharacterMount.DumpMonthEvents(monthsAhead)
+    local now = C_DateAndTime.GetCurrentCalendarTime()
+    if not now then return end
+
+    local offset = CurrentMonthOffset(now) + (monthsAhead or 0)
+    if offset == 0 then
+        DumpViewedMonth()
+        return
+    end
+    -- Event data only exists for the viewed month, so browse there and let it load.
+    C_Calendar.SetMonth(offset)
+    print("Character Mount: moved the calendar view to read that month.")
+    C_Timer.After(1, DumpViewedMonth)
+end
+
+local MONTHS_TO_SCAN = 12
+local MONTH_LOAD_DELAY = 0.7
+
+--- Dev probe: browse forward a year a month at a time and print every distinct
+--- holiday title found, which is the curation list for MountData.HOLIDAYS. The
+--- calendar view walks forward while it runs and is put back on today's month at
+--- the end.
+function CharacterMount.ScanYearEvents()
+    local now = C_DateAndTime.GetCurrentCalendarTime()
+    if not now then return end
+
+    local seen, titles = {}, {}
+
+    local function CollectViewedMonth()
+        local info = C_Calendar.GetMonthInfo(0)
+        if not info then return end
+        for day = 1, info.numDays do
+            for i = 1, (C_Calendar.GetNumDayEvents(0, day) or 0) do
+                local e = C_Calendar.GetDayEvent(0, day, i)
+                if e and e.calendarType == "HOLIDAY" and e.title and not seen[e.title] then
+                    seen[e.title] = true
+                    titles[#titles + 1] = e.title
+                end
+            end
+        end
+    end
+
+    local function Step(month)
+        CollectViewedMonth()
+        if month < MONTHS_TO_SCAN then
+            C_Calendar.SetMonth(1)
+            C_Timer.After(MONTH_LOAD_DELAY, function() Step(month + 1) end)
+            return
+        end
+        C_Calendar.SetMonth(-(MONTHS_TO_SCAN - 1))
+        table.sort(titles)
+        print(string.format("Character Mount: %d distinct holiday titles over %d months:",
+            #titles, MONTHS_TO_SCAN))
+        for _, title in ipairs(titles) do print("  " .. title) end
+    end
+
+    C_Calendar.SetMonth(CurrentMonthOffset(now))
+    C_Timer.After(MONTH_LOAD_DELAY, function() Step(1) end)
+end
+
 -- Dev-only mock overrides: title -> true. Honoured by IsHolidayActive only while
 -- debug mode is on, so gating can be previewed out of season. Not saved.
 local mockActive = {}
