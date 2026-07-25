@@ -630,6 +630,14 @@ function CharacterMount.UnexcludeMount(mountID)
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
 end
 
+-- Drop a mount from the excluded list without restoring it to the pool.
+-- ponytail: for legacy pre-onboarding users this re-adds an excluded
+-- racial/class mount to the auto pool; acceptable, see thread 1530345544621228062.
+function CharacterMount.ForgetExclusion(mountID)
+    db.exclusions[mountID] = nil
+    if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+end
+
 -- ---------------------------------------------------------------------------
 -- MountRandom — called by the macro
 -- ---------------------------------------------------------------------------

@@ -286,6 +286,10 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
 
     row:SetScript("OnMouseUp", function(self, mouseButton)
+        if mouseButton == "MiddleButton" and self.isExcluded then
+            CharacterMount.ForgetExclusion(self.mountID)
+            return
+        end
         if mouseButton ~= "LeftButton" then return end
         CharacterMount.ShowMountPreview(self.mountID, CharacterMount.frame)
     end)
@@ -294,6 +298,9 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
         if type(self.mountID) ~= "number" then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine("Click to preview this mount.", 0.9, 0.85, 0.65, true)
+        if self.isExcluded then
+            GameTooltip:AddLine("Middle-click to remove from this list.", 0.6, 0.6, 0.6, true)
+        end
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
