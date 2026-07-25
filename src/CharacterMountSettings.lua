@@ -76,7 +76,9 @@ function CharacterMount.InitSettings()
     local db = CharacterMount.db
     if not db then return end
 
-    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount")
+    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount", {
+        showAbout = false,
+    })
     CharacterMount.settingsCategory = panel.category
 
     local general = panel:Group("General")
