@@ -357,11 +357,14 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
         row.sourceLabel:SetJustifyV("MIDDLE")
     else
         -- Excluded rows: an X to drop the mount from the list without restoring it.
-        row.actionBtn:ClearAllPoints()
-        row.actionBtn:SetPoint("RIGHT", row, "RIGHT", -30, 0)
+        -- Offset -22 lines it up with the active rows, which sit inside the
+        -- scroll frame and so end 18px short of the excluded rows' right edge.
+        row.closeBtn = LuckyUI.CreateButton(row, "\195\151", 24, 22, "secondary")
+        row.closeBtn:SetPoint("RIGHT", row, "RIGHT", -22, 0)
 
-        row.closeBtn = LuckyUI.CreateButton(row, "X", 22, 22, "secondary")
-        row.closeBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+        row.actionBtn:ClearAllPoints()
+        row.actionBtn:SetPoint("RIGHT", row.closeBtn, "LEFT", -4, 0)
+
         row.closeBtn:SetScript("OnClick", function()
             CharacterMount.ForgetExclusion(row.mountID)
         end)
