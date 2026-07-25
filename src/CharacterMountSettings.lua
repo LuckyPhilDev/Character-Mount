@@ -11,6 +11,33 @@ local ROW_HEIGHT = 26
 local ROW_GAP    = 2
 local INITIAL_POOL = 20
 
+local DISCORD_URL = "discord.gg/87HRHcAYP"
+
+StaticPopupDialogs["CHARACTERMOUNT_COPY_DISCORD"] = {
+    text         = "Copy the Discord link:",
+    button1      = CLOSE,
+    hasEditBox   = 1,
+    editBoxWidth = 220,
+    OnShow = function(self)
+        local editBox = self.editBox or _G[self:GetName() .. "EditBox"]
+        editBox:SetMaxLetters(0)
+        editBox:SetText("https://" .. DISCORD_URL)
+        editBox:HighlightText()
+        editBox:SetFocus()
+    end,
+    OnHide = function(self)
+        local editBox = self.editBox or _G[self:GetName() .. "EditBox"]
+        editBox:SetText("")
+    end,
+    timeout      = 0,
+    whileDead    = true,
+    hideOnEscape = true,
+}
+
+local function HolidayNote(titles)
+    return "Covers: " .. table.concat(titles, ", ") .. "."
+end
+
 -- ---------------------------------------------------------------------------
 -- Create one mount-list row inside the settings scroll content
 -- ---------------------------------------------------------------------------
@@ -108,6 +135,22 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    general:BottomSection("Version info")
+    general:BottomLabel({
+        label = "Character Mount",
+        value = "v" .. (C_AddOns.GetAddOnMetadata("Luckys_Character_Mount", "Version") or "?"),
+    })
+    general:BottomLabel({
+        label = "Lucky's Utils",
+        value = "v" .. (C_AddOns.GetAddOnMetadata("Luckys_Utils", "Version") or "?"),
+    })
+    general:BottomLink({
+        label   = "Discord",
+        value   = "|A:chatframe-button-copy:11:11|a " .. DISCORD_URL,
+        onClick = function() StaticPopup_Show("CHARACTERMOUNT_COPY_DISCORD") end,
+    })
+    LuckyPromo:AddToRichGroup(general, "Luckys_Character_Mount")
+
     local mountBehavior = panel:Group("Mount behavior")
     mountBehavior:Toggle({
         label    = "Allow dismount while flying",
@@ -140,6 +183,7 @@ function CharacterMount.InitSettings()
     mountBehavior:Toggle({
         label    = "Assign mounts to holidays",
         desc     = "Adds an \"Only during a holiday\" submenu to each mount's options, so you can limit any mount to a chosen in-game holiday.",
+        note     = HolidayNote(CharacterMount.MountData.HOLIDAYS),
         checked  = CharacterMountDB.holidayAssignEnabled or false,
         onToggle = function(checked)
             CharacterMountDB.holidayAssignEnabled = checked
@@ -149,6 +193,7 @@ function CharacterMount.InitSettings()
     mountBehavior:Toggle({
         label    = "Include micro-holidays",
         desc     = "Adds the short events to that submenu too, such as Un'Goro Madness, Trial of Style, and the bonus event weeks.",
+        note     = HolidayNote(CharacterMount.MountData.MICRO_HOLIDAYS),
         parent   = "Assign mounts to holidays",
         checked  = CharacterMountDB.microHolidaysEnabled or false,
         onToggle = function(checked)
