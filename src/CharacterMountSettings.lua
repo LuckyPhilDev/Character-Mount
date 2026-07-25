@@ -57,14 +57,11 @@ local function CreateSettingsRow(parent, index)
     row.icon:SetPoint("LEFT", 4, 0)
 
     -- Remove button
-    row.removeBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    row.removeBtn:SetSize(24, 22)
-    row.removeBtn:SetText("\195\151")
+    row.removeBtn = LuckyUI.CreateButton(row, "\195\151", 24, 22, "secondary")
     row.removeBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 
     -- Per-spec availability button (opens the shared spec dropdown)
-    row.specBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-    row.specBtn:SetSize(34, 22)
+    row.specBtn = LuckyUI.CreateButton(row, "", 34, 22, "secondary")
     row.specBtn:SetPoint("RIGHT", row.removeBtn, "LEFT", -4, 0)
     row.specBtn:SetScript("OnClick", function()
         CharacterMount.ShowSpecMenu(row.specBtn, row.mountID)
