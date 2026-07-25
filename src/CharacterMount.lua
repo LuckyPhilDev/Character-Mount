@@ -290,6 +290,31 @@ local function ClearMountSettings(mountID)
     if db.holidayOnly then db.holidayOnly[mountID] = nil end
 end
 
+--- Stash a mount's per-mount settings so a later restore can bring them back.
+local function PreserveMountSettings(mountID)
+    db.preservedSettings = db.preservedSettings or {}
+    db.preservedSettings[mountID] = {
+        specExclusions = db.specExclusions and db.specExclusions[mountID],
+        mountTypes     = db.mountTypes and db.mountTypes[mountID],
+        holidayOnly    = db.holidayOnly and db.holidayOnly[mountID],
+    }
+end
+
+--- Re-instate settings stashed at removal time, then drop the stash.
+local function RestoreMountSettings(mountID)
+    local saved = db.preservedSettings and db.preservedSettings[mountID]
+    if not saved then return end
+    db.specExclusions[mountID] = saved.specExclusions
+    db.mountTypes[mountID]     = saved.mountTypes
+    db.holidayOnly[mountID]    = saved.holidayOnly
+    db.preservedSettings[mountID] = nil
+end
+
+--- Forget any stashed settings (a fresh add starts from defaults).
+local function ForgetPreservedSettings(mountID)
+    if db.preservedSettings then db.preservedSettings[mountID] = nil end
+end
+
 -- ---------------------------------------------------------------------------
 -- Per-mount "count as" types
 -- ---------------------------------------------------------------------------
@@ -581,6 +606,7 @@ function CharacterMount.AddMount(mountID)
     db.exclusions[mountID] = nil
     db.additions[mountID]  = "manual"
     ClearMountSettings(mountID)
+    ForgetPreservedSettings(mountID)
     print(PREFIX .. " Added " .. name .. " to your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
@@ -617,6 +643,7 @@ function CharacterMount.RemoveMount(mountID)
     end
     db.additions[mountID]  = nil
     db.exclusions[mountID] = true
+    PreserveMountSettings(mountID)
     ClearMountSettings(mountID)
     print(PREFIX .. " Removed " .. name .. " from your list.")
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
@@ -626,7 +653,7 @@ end
 function CharacterMount.UnexcludeMount(mountID)
     db.exclusions[mountID] = nil
     db.additions[mountID]  = "manual"
-    ClearMountSettings(mountID)
+    RestoreMountSettings(mountID)
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
 end
 
@@ -1170,6 +1197,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         db.exclusions     = {}
         db.specExclusions = {}
         db.mountTypes     = {}
+        db.preservedSettings = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         print(PREFIX .. " All exclusions cleared.")
     elseif lower == "reset all" then
@@ -1177,6 +1205,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         db.additions      = {}
         db.specExclusions = {}
         db.mountTypes     = {}
+        db.preservedSettings = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
         print(PREFIX .. " All exclusions and manual additions cleared.")
     elseif lower == "reset onboarding" then

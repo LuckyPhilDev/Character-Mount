@@ -1,3 +1,8 @@
+## [1.8.1] - 2026-07-25
+
+### Fixed
+- Restoring a mount from the Excluded section now brings back its spec, count-as type, and holiday settings, instead of starting from scratch. (Thanks for the suggestion Tuulani)
+
 ## [1.8.0] - 2026-07-24
 
 ### Added
