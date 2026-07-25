@@ -126,15 +126,6 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    general:Toggle({
-        label    = "Silence mount warnings",
-        desc     = "Stop chat messages when you cannot mount, such as in combat or indoors.",
-        checked  = CharacterMountDB.quietMountWarnings or false,
-        onToggle = function(checked)
-            CharacterMountDB.quietMountWarnings = checked
-        end,
-    })
-
     general:BottomSection("Version info")
     general:BottomLabel({
         label = "Character Mount",
@@ -151,18 +142,10 @@ function CharacterMount.InitSettings()
     })
     LuckyPromo:AddToRichGroup(general, "Luckys_Character_Mount")
 
-    local mountBehavior = panel:Group("Mount behavior")
-    mountBehavior:Toggle({
-        label    = "Allow dismount while flying",
-        desc     = "When enabled, pressing the mount macro mid-air will dismount you.",
-        checked  = CharacterMountDB.allowFlyingDismount or false,
-        onToggle = function(checked)
-            CharacterMountDB.allowFlyingDismount = checked
-            CharacterMount.PreRoll()
-        end,
-    })
+    local preferences = panel:Group("Preferences")
 
-    mountBehavior:Toggle({
+    preferences:Section("New mounts")
+    preferences:Toggle({
         label    = "Prompt on New Mount",
         desc     = "Show a dialog asking to add a newly unlocked mount to your character list.",
         checked  = CharacterMountDB.autoPromptNewMount ~= false,
@@ -171,16 +154,18 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    mountBehavior:Toggle({
+    preferences:Toggle({
         label    = "Show 3D mount preview",
         desc     = "Display a live 3D model of the mount next to the new-mount prompt.",
+        parent   = "Prompt on New Mount",
         checked  = CharacterMountDB.showMountPreview ~= false,
         onToggle = function(checked)
             CharacterMountDB.showMountPreview = checked
         end,
     })
 
-    mountBehavior:Toggle({
+    preferences:Section("Holidays")
+    preferences:Toggle({
         label    = "Assign mounts to holidays",
         desc     = "Adds an \"Only during a holiday\" submenu to each mount's options, so you can limit any mount to a chosen in-game holiday.",
         note     = HolidayNote(CharacterMount.MountData.HOLIDAYS),
@@ -190,7 +175,7 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    mountBehavior:Toggle({
+    preferences:Toggle({
         label    = "Include micro-holidays",
         desc     = "Adds the short events to that submenu too, such as Un'Goro Madness, Trial of Style, and the bonus event weeks.",
         note     = HolidayNote(CharacterMount.MountData.MICRO_HOLIDAYS),
@@ -201,7 +186,7 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    mountBehavior:Slider({
+    preferences:Slider({
         label    = "Holiday mount chance",
         desc     = "While a holiday is running, this is the chance each roll picks one of that holiday's mounts. The rest of the time a normal mount is chosen.",
         parent   = "Assign mounts to holidays",
@@ -238,6 +223,26 @@ function CharacterMount.InitSettings()
         onClick = function()
             CharacterMount.CreateGroundMacro()
             HideUIPanel(SettingsPanel)
+        end,
+    })
+
+    macros:Section("Macro behaviour")
+    macros:Toggle({
+        label    = "Allow dismount while flying",
+        desc     = "When enabled, pressing the mount macro mid-air will dismount you.",
+        checked  = CharacterMountDB.allowFlyingDismount or false,
+        onToggle = function(checked)
+            CharacterMountDB.allowFlyingDismount = checked
+            CharacterMount.PreRoll()
+        end,
+    })
+
+    macros:Toggle({
+        label    = "Silence mount warnings",
+        desc     = "Stop chat messages when you cannot mount, such as in combat or indoors.",
+        checked  = CharacterMountDB.quietMountWarnings or false,
+        onToggle = function(checked)
+            CharacterMountDB.quietMountWarnings = checked
         end,
     })
 
@@ -344,13 +349,13 @@ function CharacterMount.InitSettings()
     panel:OnOpen(function()
         general.byLabel["Debug mode"].checkbox:SetChecked(CharacterMountDB.debugMode or false)
         general.byLabel["Minimap button"].checkbox:SetChecked(not (CharacterMountDB.minimap or {}).hide)
-        general.byLabel["Silence mount warnings"].checkbox:SetChecked(CharacterMountDB.quietMountWarnings or false)
-        mountBehavior.byLabel["Allow dismount while flying"].checkbox:SetChecked(CharacterMountDB.allowFlyingDismount or false)
-        mountBehavior.byLabel["Prompt on New Mount"].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
-        mountBehavior.byLabel["Show 3D mount preview"].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
-        mountBehavior.byLabel["Assign mounts to holidays"].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
-        mountBehavior.byLabel["Include micro-holidays"].checkbox:SetChecked(CharacterMountDB.microHolidaysEnabled or false)
-        mountBehavior.byLabel["Holiday mount chance"].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
+        macros.byLabel["Silence mount warnings"].checkbox:SetChecked(CharacterMountDB.quietMountWarnings or false)
+        macros.byLabel["Allow dismount while flying"].checkbox:SetChecked(CharacterMountDB.allowFlyingDismount or false)
+        preferences.byLabel["Prompt on New Mount"].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
+        preferences.byLabel["Show 3D mount preview"].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
+        preferences.byLabel["Assign mounts to holidays"].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
+        preferences.byLabel["Include micro-holidays"].checkbox:SetChecked(CharacterMountDB.microHolidaysEnabled or false)
+        preferences.byLabel["Holiday mount chance"].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
         RefreshMountList()
     end)
 end
