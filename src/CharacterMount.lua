@@ -414,6 +414,22 @@ function CharacterMount.SetHolidayGate(mountID, title, enabled)
     CharacterMount.PreRoll()
 end
 
+--- Holiday titles to offer in a mount's assignment menu: the configured list,
+--- plus any title the mount is already gated to. Without the second part,
+--- switching micro-holidays back off would leave a gate the player can no longer
+--- see, on a mount that silently stays out of the rotation.
+function CharacterMount.GetAssignableHolidays(mountID)
+    local titles, listed = {}, {}
+    for _, title in ipairs(CharacterMount.MountData.GetHolidayList()) do
+        titles[#titles + 1] = title
+        listed[title] = true
+    end
+    for title in pairs(HolidayGateSet(mountID) or {}) do
+        if not listed[title] then titles[#titles + 1] = title end
+    end
+    return titles
+end
+
 --- Quick "during its own holiday only" toggle for auto-detected holiday mounts.
 function CharacterMount.IsHolidayOnly(mountID)
     local holiday = CharacterMount.GetMountHoliday(mountID)
@@ -538,7 +554,7 @@ function CharacterMount.ShowSpecMenu(anchor, mountID)
         if CharacterMountDB.holidayAssignEnabled then
             root:CreateDivider()
             local sub = root:CreateButton("Only during a holiday")
-            for _, title in ipairs(CharacterMount.MountData.GetHolidayList()) do
+            for _, title in ipairs(CharacterMount.GetAssignableHolidays(mountID)) do
                 sub:CreateCheckbox(title,
                     function()
                         return CharacterMount.IsHolidayGated(mountID, title)

@@ -599,23 +599,68 @@ end
 -- Static holiday list for manually assigning any mount to a holiday. Titles must
 -- match the calendar day-event title exactly (English), same rule as the matchers
 -- above. Roughly calendar order. Variable-title events (such as the yearly
--- Anniversary) are left out because their title changes and would never match.
+-- Anniversary, which reads "WoW's 22nd Anniversary") are left out because their
+-- title changes and would never match a year later.
 MD.HOLIDAYS = {
     "Lunar Festival",
     "Love is in the Air",
     "Noblegarden",
     "Children's Week",
     "Midsummer Fire Festival",
-    "Pirates' Day",
+    "Harvest Festival",
     "Brewfest",
     "Hallow's End",
-    "Day of the Dead",
+    "Pilgrim's Bounty",
     "Feast of Winter Veil",
-    "Call of the Scarab",
-    "Darkmoon Faire",
+    "Darkmoon Faire",  -- monthly, so last rather than in calendar order
 }
 
---- Returns the static list of holiday titles for the assignment menu.
+-- Micro-holidays and bonus events: the short, frequent calendar events. Opt-in,
+-- because they more than triple the length of the assignment menu. Alphabetical
+-- rather than calendar order, which is the only way to find one in a list this
+-- long. Read straight off the calendar with /cmount calendarscan; the racing
+-- cups rotate per patch, so only the ones live in the scanned year are here.
+MD.MICRO_HOLIDAYS = {
+    "Arena Skirmish Bonus Event",
+    "Auction House Dance Party",
+    "Battleground Bonus Event",
+    "Call of the Scarab",
+    "Darkspear Dash",
+    "Day of the Dead",
+    "Delves Bonus Event",
+    "Fireworks Celebration",
+    "Fireworks Spectacular",
+    "Free T-Shirt Day",
+    "Glowcap Festival",
+    "Hatching of the Hippogryphs",
+    "Kalimdor Cup",
+    "Luminous Luminaries",
+    "March of the Tadpoles",
+    "Midnight Dungeon Event",
+    "Moonkin Festival",
+    "Northrend Cup",
+    "Pet Battle Bonus Event",
+    "Pirates' Day",
+    "Spring Balloon Festival",
+    "The Great Gnomeregan Run",
+    "Thousand Boat Bash",
+    "Timewalking Dungeon Event",
+    "Trial of Style",
+    "Turbulent Timeways",
+    "Un'Goro Madness",
+    "Volunteer Guard Day",
+    "Wanderer's Festival",
+    "World Quest Bonus Event",
+}
+
+--- Returns the holiday titles offered in the assignment menu, with the
+--- micro-holidays appended only when the player has opted into them.
 function MD.GetHolidayList()
-    return MD.HOLIDAYS
+    if not (CharacterMountDB and CharacterMountDB.microHolidaysEnabled) then
+        return MD.HOLIDAYS
+    end
+    local all = {}
+    for _, title in ipairs(MD.HOLIDAYS)       do all[#all + 1] = title end
+    for _, title in ipairs(MD.MICRO_HOLIDAYS) do all[#all + 1] = title end
+    return all
 end

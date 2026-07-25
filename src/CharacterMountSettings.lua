@@ -146,6 +146,16 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    mountBehavior:Toggle({
+        label    = "Include micro-holidays",
+        desc     = "Adds the short events to that submenu too, such as Un'Goro Madness, Trial of Style, and the bonus event weeks.",
+        parent   = "Assign mounts to holidays",
+        checked  = CharacterMountDB.microHolidaysEnabled or false,
+        onToggle = function(checked)
+            CharacterMountDB.microHolidaysEnabled = checked
+        end,
+    })
+
     mountBehavior:Slider({
         label    = "Holiday mount chance",
         desc     = "While a holiday is running, this is the chance each roll picks one of that holiday's mounts. The rest of the time a normal mount is chosen.",
@@ -292,6 +302,7 @@ function CharacterMount.InitSettings()
         mountBehavior.byLabel["Prompt on New Mount"].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
         mountBehavior.byLabel["Show 3D mount preview"].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
         mountBehavior.byLabel["Assign mounts to holidays"].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
+        mountBehavior.byLabel["Include micro-holidays"].checkbox:SetChecked(CharacterMountDB.microHolidaysEnabled or false)
         mountBehavior.byLabel["Holiday mount chance"].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
         RefreshMountList()
     end)
