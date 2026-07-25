@@ -76,9 +76,7 @@ function CharacterMount.InitSettings()
     local db = CharacterMount.db
     if not db then return end
 
-    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount", {
-        showAbout = false,
-    })
+    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount")
     CharacterMount.settingsCategory = panel.category
 
     local general = panel:Group("General")
@@ -198,7 +196,9 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    local mountListGroup = panel:Group("Mount List")
+    local mountListGroup = panel:Group("Mount List", {
+        showAbout = false,
+    })
     mountListGroup:Button({
         label   = "Open Mount Journal",
         desc    = "Open the Mount Journal to add or remove mounts from your character list.",
