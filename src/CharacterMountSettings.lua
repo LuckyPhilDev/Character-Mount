@@ -146,8 +146,28 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    local macros = panel:Group("Macros")
-    macros:Button({
+    ---------------------------------------------------------------------------
+    -- Default macro
+    ---------------------------------------------------------------------------
+    panel:Section("Default Macro")
+
+    panel:Button({
+        label   = "Get Default Macro",
+        desc    = "Puts the standard mount macro on your cursor. Drop it on an action bar to summon a random mount suited to where you are.",
+        tooltip = "Creates the default macro that rolls a mount for your current location, then places it on your cursor ready to drop onto a bar.",
+        width   = 160,
+        onClick = function()
+            CharacterMount.CreateMacro()
+            HideUIPanel(SettingsPanel)
+        end,
+    })
+
+    ---------------------------------------------------------------------------
+    -- Ground-only macro
+    ---------------------------------------------------------------------------
+    panel:Section("Ground Macro")
+
+    panel:Button({
         label   = "Get Ground Macro",
         desc    = "Puts a ground-only mount macro on your cursor. Drop it on an action bar to summon a random ground mount, even in flying zones.",
         tooltip = "Creates a macro that always rolls a ground mount, then places it on your cursor ready to drop onto a bar.",
