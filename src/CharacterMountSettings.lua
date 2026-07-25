@@ -146,12 +146,24 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    ---------------------------------------------------------------------------
-    -- Default macro
-    ---------------------------------------------------------------------------
-    panel:Section("Default Macro")
+    mountBehavior:Slider({
+        label    = "Holiday mount chance",
+        desc     = "While a holiday is running, this is the chance each roll picks one of that holiday's mounts. The rest of the time a normal mount is chosen.",
+        parent   = "Assign mounts to holidays",
+        min      = 10,
+        max      = 100,
+        step     = 5,
+        suffix   = "%",
+        value    = CharacterMountDB.holidayWeightPercent or 50,
+        onChanged = function(val)
+            CharacterMountDB.holidayWeightPercent = val
+        end,
+    })
 
-    panel:Button({
+    local macros = panel:Group("Macros")
+
+    macros:Section("Default Macro")
+    macros:Button({
         label   = "Get Default Macro",
         desc    = "Puts the standard mount macro on your cursor. Drop it on an action bar to summon a random mount suited to where you are.",
         tooltip = "Creates the default macro that rolls a mount for your current location, then places it on your cursor ready to drop onto a bar.",
@@ -162,12 +174,8 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    ---------------------------------------------------------------------------
-    -- Ground-only macro
-    ---------------------------------------------------------------------------
-    panel:Section("Ground Macro")
-
-    panel:Button({
+    macros:Section("Ground Macro")
+    macros:Button({
         label   = "Get Ground Macro",
         desc    = "Puts a ground-only mount macro on your cursor. Drop it on an action bar to summon a random ground mount, even in flying zones.",
         tooltip = "Creates a macro that always rolls a ground mount, then places it on your cursor ready to drop onto a bar.",
@@ -284,6 +292,7 @@ function CharacterMount.InitSettings()
         mountBehavior.byLabel["Prompt on New Mount"].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
         mountBehavior.byLabel["Show 3D mount preview"].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
         mountBehavior.byLabel["Assign mounts to holidays"].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
+        mountBehavior.byLabel["Holiday mount chance"].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
         RefreshMountList()
     end)
 end

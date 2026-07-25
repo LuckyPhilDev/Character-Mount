@@ -436,31 +436,52 @@ function CharacterMount.IsMountAvailableNow(mountID)
     return false
 end
 
--- A mount whose holiday is running right now rolls at this multiple of a normal
--- mount's weight, so seasonal mounts surface more often during their event.
-local HOLIDAY_ROLL_WEIGHT = 2
+-- When a mount's own holiday is running, this percent of rolls are steered to a
+-- holiday mount (any live one), so seasonal mounts surface more during their
+-- event. User-tunable 10-100; the rest of the time a normal mount is rolled.
+local DEFAULT_HOLIDAY_PICK_PERCENT = 50
 
-local function EntryRollWeight(entry)
-    local holiday = entry.id and CharacterMount.GetMountHoliday(entry.id)
-    if holiday and CharacterMount.IsHolidayActive(holiday) then
-        return HOLIDAY_ROLL_WEIGHT
-    end
-    return 1
+local function HolidayPickPercent()
+    return (CharacterMountDB and CharacterMountDB.holidayWeightPercent)
+        or DEFAULT_HOLIDAY_PICK_PERCENT
 end
 
---- Pick one entry from a pool, weighting a mount whose holiday is live now at
---- HOLIDAY_ROLL_WEIGHT× a normal mount. Returns nil for an empty pool.
+-- A manual gate is the player's explicit assignment, so it wins over the
+-- name-matched holiday when both exist.
+local function EntryHolidayLive(entry)
+    if not entry.id then return false end
+    local set = CharacterMount.GetHolidayGates(entry.id)
+    if set then
+        for title in pairs(set) do
+            if CharacterMount.IsHolidayActive(title) then return true end
+        end
+        return false
+    end
+    local holiday = CharacterMount.GetMountHoliday(entry.id)
+    return holiday ~= nil and CharacterMount.IsHolidayActive(holiday)
+end
+
+--- Pick one entry from a pool. When it holds both live-holiday mounts and
+--- normal ones, HolidayPickPercent% of rolls land on a (uniformly chosen)
+--- holiday mount and the rest on a normal mount. Otherwise a plain uniform
+--- pick. Returns nil for an empty pool.
 local function WeightedPick(pool)
     local n = #pool
     if n == 0 then return nil end
-    local total = 0
-    for i = 1, n do total = total + EntryRollWeight(pool[i]) end
-    local r = math.random() * total
+    local holiday, normal = {}, {}
     for i = 1, n do
-        r = r - EntryRollWeight(pool[i])
-        if r <= 0 then return pool[i] end
+        if EntryHolidayLive(pool[i]) then
+            holiday[#holiday + 1] = pool[i]
+        else
+            normal[#normal + 1] = pool[i]
+        end
     end
-    return pool[n]
+    if #holiday == 0 then return normal[math.random(#normal)] end
+    if #normal == 0 then return holiday[math.random(#holiday)] end
+    if math.random() * 100 < HolidayPickPercent() then
+        return holiday[math.random(#holiday)]
+    end
+    return normal[math.random(#normal)]
 end
 
 --- Open the per-mount spec and type dropdown anchored to `anchor`.
