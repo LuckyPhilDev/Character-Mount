@@ -286,10 +286,6 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
 
     row:SetScript("OnMouseUp", function(self, mouseButton)
-        if mouseButton == "MiddleButton" and self.isExcluded then
-            CharacterMount.ForgetExclusion(self.mountID)
-            return
-        end
         if mouseButton ~= "LeftButton" then return end
         CharacterMount.ShowMountPreview(self.mountID, CharacterMount.frame)
     end)
@@ -298,9 +294,6 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
         if type(self.mountID) ~= "number" then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine("Click to preview this mount.", 0.9, 0.85, 0.65, true)
-        if self.isExcluded then
-            GameTooltip:AddLine("Middle-click to remove from this list.", 0.6, 0.6, 0.6, true)
-        end
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -327,7 +320,7 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
 
     -- Name label — width depends on whether the source label and spec button
     -- share the trailing space (active rows only).
-    local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 110 or 0) - 30
+    local nameLabelWidth = rowWidth - 4 - 22 - 5 - (hasSourceLabel and 110 or 28) - 30
     row.nameLabel = row:CreateFontString(nil, "OVERLAY")
     row.nameLabel:SetFont(LuckyUI.BODY_FONT, 13)
     row.nameLabel:SetSize(nameLabelWidth, ROW_HEIGHT)
@@ -362,6 +355,22 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
         row.sourceLabel:SetPoint("CENTER", 0, 0)
         row.sourceLabel:SetJustifyH("CENTER")
         row.sourceLabel:SetJustifyV("MIDDLE")
+    else
+        -- Excluded rows: an X to drop the mount from the list without restoring it.
+        row.actionBtn:ClearAllPoints()
+        row.actionBtn:SetPoint("RIGHT", row, "RIGHT", -30, 0)
+
+        row.closeBtn = LuckyUI.CreateButton(row, "X", 22, 22, "secondary")
+        row.closeBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
+        row.closeBtn:SetScript("OnClick", function()
+            CharacterMount.ForgetExclusion(row.mountID)
+        end)
+        row.closeBtn:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:AddLine("Remove from this list", 0.9, 0.85, 0.65, true)
+            GameTooltip:Show()
+        end)
+        row.closeBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
     end
 
     return row
