@@ -1,15 +1,14 @@
-## [1.8.1] - 2026-07-25
+## [1.9.0] - 2026-07-25
+
+### Added
+- Excluded mounts can now be removed for good. Each row in the Excluded section has an X button that clears the mount out entirely, instead of leaving it sitting there forever. (Thanks for the suggestion Tuulani)
+- New "Holiday mount chance" slider in settings. Set how often a holiday mount comes up while its event is running, anywhere from 10% to 100% of your rolls. Previously this was fixed.
+- New "Include micro-holidays" toggle adds the short events to the holiday list, such as Un'Goro Madness, Trial of Style, and the bonus event weeks.
+- New "Get Default Macro" button in settings puts the standard mount macro on your cursor, ready to drop onto an action bar. No more remembering the slash command.
+- Settings panel now shows the addon version and a Discord link, so it is easier to check what you are running and get in touch.
 
 ### Fixed
 - Restoring a mount from the Excluded section now brings back its spec, count-as type, and holiday settings, instead of starting from scratch. (Thanks for the suggestion Tuulani)
 
-## [1.8.0] - 2026-07-24
-
-### Added
-- New "Get Ground Macro" button in the settings panel. It puts a ground-only mount macro on your cursor, ready to drop on an action bar. Use it to summon a random ground mount even in zones where you could fly, for when you want to stay on the ground. (Thanks for the suggestion Tuulani)
-- Holiday mounts can now be limited to their event. Open a mount's options and tick "During [holiday] only" to keep seasonal mounts like Brewfest rams or the Headless Horseman's mount out of your random rotation until their holiday is running. (Thanks for the suggestion Tuulani)
-- Turn on "Assign mounts to holidays" in settings to limit any mount to a holiday of your choice, not just the seasonal ones. Each mount's options gains an "Only during a holiday" submenu with a checkbox per holiday. Handy for a mount you have themed to an event, like a drake you only ride during the Lunar Festival. (Thanks for the suggestion Tuulani)
-- While a holiday is running, its mounts now come up about twice as often when you summon a random mount, so seasonal mounts get the spotlight during their event.
-
-### Fixed
-- A custom icon you set on the mount macro now sticks, instead of resetting to the default each time you summon.
+### Improved
+- Settings are reorganised into clearer groups, so mount, macro, and holiday options are easier to find.

@@ -21,10 +21,10 @@
 - **Count as another type**: the same button lets you choose which types a mount counts as, with its own types ticked by default. Tick Ground on a flying-only mount and it becomes a candidate on the ground, or tick Flying on a ground mount for the look you want. Flying will not make a ground mount fly, it just gets summoned.
 - **Holiday-only mounts**: for seasonal mounts, the options button offers a "During [holiday] only" toggle. Turn it on and the mount only joins your random rotation while its holiday is actually running, checked against the in-game calendar. Covers Brewfest, Hallow's End, Noblegarden, Love is in the Air, Feast of Winter Veil, and Call of the Scarab.
 - **Assign any mount to a holiday**: turn on "Assign mounts to holidays" in settings and every mount's options gains an "Only during a holiday" submenu, so you can tie any mount to a holiday of your choice, not just the seasonal ones. Tick "Include micro-holidays" to add the short events as well, from Un'Goro Madness and Trial of Style to the bonus event weeks.
-- **Seasonal spotlight**: while a holiday is running, its mounts come up about twice as often when you summon a random mount, so festive mounts get their moment during the event.
-- **Excluded mounts**: removed mounts appear in an "Excluded" section with a one-click restore that brings back the mount's spec, count-as type, and holiday settings.
+- **Seasonal spotlight**: while a holiday is running, its mounts come up more often when you summon a random mount. The "Holiday mount chance" slider in settings sets how often, from 10% to 100% of your rolls.
+- **Excluded mounts**: removed mounts appear in an "Excluded" section with a one-click restore that brings back the mount's spec, count-as type, and holiday settings, or an X button to clear the mount out for good.
 - **Minimap button**: left-click to open the mount list, right-click for settings, middle-click to toggle dev mode. Drag to reposition.
-- **Settings panel**: configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`. Includes toggles to disable the new mount prompt, its 3D preview, and the chat warnings shown when you cannot mount.
+- **Settings panel**: configure options and view your mount list via ESC > Options > AddOns, or `/cmount settings`. Includes toggles to disable the new mount prompt, its 3D preview, and the chat warnings shown when you cannot mount, plus buttons that put the standard or ground-only macro straight on your cursor.
 - **Debug mode**: account-wide toggle to print mount selection diagnostics to chat.
 - **Open Mount Journal**: quick-access button in both the mount list and settings panel.
 
