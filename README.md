@@ -66,3 +66,9 @@ You can re-run the onboarding at any time via the **Setup** button in the mount 
 - The first macro click after creating the macro uses a fallback random mount. Subsequent clicks use the full random pool including spell forms.
 - Spell form availability is checked via `IsSpellKnown()`. If a spell is temporarily unavailable (e.g., level-restricted), it won't appear in the pool.
 - Profession mounts (tailoring carpets, engineering machines, etc.) are filtered out of onboarding suggestions.
+
+---
+
+### A note on AI
+
+My addons are made by one person who plays the game and wants them to work properly. I use AI tools to move faster, mostly on code, bug hunting, and docs, but every change is reviewed and tested in game before release. If a feature feels off or something breaks, that's mine to fix, and the Discord is the fastest way to reach me.
