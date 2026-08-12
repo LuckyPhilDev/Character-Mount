@@ -1,3 +1,8 @@
+## [1.9.2] - 2026-08-12
+
+### Fixed
+- Lines you add to the CharMount and CharMountGround macros yourself are no longer wiped when you press them. (Thanks for the suggestion Tuulani)
+
 ## [1.9.1] - 2026-08-12
 
 ### Improved
