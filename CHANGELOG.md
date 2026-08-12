@@ -1,3 +1,8 @@
+## [1.9.1] - 2026-08-12
+
+### Improved
+- **Updated for patch 12.1.** The addon no longer shows as out of date in your addon list.
+
 ## [1.9.0] - 2026-07-25
 
 ### Added
