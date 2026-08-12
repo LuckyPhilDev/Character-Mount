@@ -1,4 +1,4 @@
-[Join the Discord](https://discord.gg/87HRHcAYP)
+[Join the Discord](https://discord.gg/ptTtYyAjdZ)
 
 **Character Mount** gives each of your characters a personal mount list and summons a random mount from it with a single button press.
 

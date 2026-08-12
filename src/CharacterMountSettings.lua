@@ -11,7 +11,7 @@ local ROW_HEIGHT = 26
 local ROW_GAP    = 2
 local INITIAL_POOL = 20
 
-local DISCORD_URL = "discord.gg/87HRHcAYP"
+local DISCORD_URL = "discord.gg/ptTtYyAjdZ"
 
 StaticPopupDialogs["CHARACTERMOUNT_COPY_DISCORD"] = {
     text         = "Copy the Discord link:",
