@@ -1000,6 +1000,52 @@ local function BuildRollPool(category)
     return #preferred > 0 and preferred or usable
 end
 
+--- True for a macro line the addon wrote and is free to rewrite on a roll.
+--- Everything else in the body is the player's own and must survive.
+local function IsOurMacroLine(line)
+    local cmd, rest = line:match("^%s*(/%S+)%s*(.-)%s*$")
+    if not cmd then return false end
+    cmd = cmd:lower()
+    if cmd == "/cmount" or cmd == "/charactermount" then return true end
+    if cmd == "/dismount" then return rest:find("^%[mounted") ~= nil end
+    if cmd == "/cast" then
+        for _, form in pairs(CharacterMount.FORM_SPELLS) do
+            local info = C_Spell.GetSpellInfo(form.spellID)
+            if info and info.name == rest then return true end
+        end
+    end
+    return false
+end
+
+--- Splice a freshly rolled body into an existing macro. Our lines are replaced
+--- where the first of them sat, so a player's own line above the mount stays
+--- above it, and lines they added anywhere else keep their order.
+function CharacterMount.MergeMacroBody(existing, body)
+    if not existing or existing == "" then return body end
+
+    local kept, insertAt = {}, nil
+    for line in ((existing:gsub("\n+$", "")) .. "\n"):gmatch("(.-)\n") do
+        if IsOurMacroLine(line) then
+            insertAt = insertAt or (#kept + 1)
+        else
+            kept[#kept + 1] = line
+        end
+    end
+
+    local at = insertAt or (#kept + 1)
+    for line in (body .. "\n"):gmatch("(.-)\n") do
+        table.insert(kept, at, line)
+        at = at + 1
+    end
+    return table.concat(kept, "\n")
+end
+
+--- Rewrite only our lines in an existing macro, keeping the player's own icon,
+--- name, and any lines they added to the body.
+local function WriteMacroBody(idx, body)
+    EditMacro(idx, nil, nil, CharacterMount.MergeMacroBody(GetMacroBody(idx) or "", body))
+end
+
 --- Pre-roll every existing CharMount macro: pick each one's next mount/form and
 --- rewrite it so the next click executes it. The normal macro rolls against the
 --- eligible category; the ground macro forces GROUND.
@@ -1024,9 +1070,7 @@ function CharacterMount.PreRoll()
                     devLog("[ROLL] " .. spec.name .. " next click → mount: " .. pick.name)
                     body = CharacterMount.BuildMacroBody(nil, spec.mountCmd)
                 end
-                -- ponytail: nil name/icon => keep the user's chosen icon (and any
-                -- rename); only the body is ours to rewrite each roll.
-                EditMacro(idx, nil, nil, body)
+                WriteMacroBody(idx, body)
             end
         end
     end
@@ -1042,8 +1086,7 @@ local function CreateMacroFromSpec(spec)
     local body = CharacterMount.BuildMacroBody(nil, spec.mountCmd)
     local idx = GetMacroIndexByName(spec.name)
     if idx and idx > 0 then
-        -- ponytail: nil name/icon => don't reset a user's custom icon/rename on re-create.
-        EditMacro(idx, nil, nil, body)
+        WriteMacroBody(idx, body)
         print(PREFIX .. " Macro '" .. spec.name .. "' updated. Drag it to your action bar.")
         PickupMacro(spec.name)
         return
