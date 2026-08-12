@@ -28,9 +28,10 @@ dofile("src/CharacterMount.lua")
 
 local Merge = CharacterMount.MergeMacroBody
 
-local MOUNT  = "/cmount mount\n/cmount roll"
-local GROUND = "/cmount groundmount\n/cmount roll"
-local FORM   = "/dismount [mounted, noflying]\n/cast Travel Form\n/cmount roll"
+local MOUNT       = "/cmount mount\n/cmount roll"
+local GROUND      = "/cmount groundmount\n/cmount roll"
+local FORM        = "/dismount [mounted, noflying]\n/cast Travel Form\n/cmount roll"
+local GROUND_FORM = "/dismount [mounted, noflying]\n/cast Running Wild\n/cmount roll"
 
 local function check(label, got, want)
     assert(got == want, ("%s\n  got:  %q\n  want: %q"):format(label, got, want))
@@ -53,6 +54,16 @@ check("and again on the next roll",
 local body = edited
 for _ = 1, 20 do body = Merge(body, FORM) end
 check("stable over many rolls", body, "/cast Revive Battle Pets\n" .. FORM)
+
+-- The ground macro is protected the same way. A roll rewrites both macros
+-- whichever one was clicked, so an edit here survives a click of the other.
+local editedGround = "/cast Revive Battle Pets\n" .. GROUND
+check("ground macro keeps player line",
+    Merge(editedGround, GROUND_FORM),
+    "/cast Revive Battle Pets\n" .. GROUND_FORM)
+check("ground macro stable across rolls",
+    Merge(Merge(editedGround, GROUND_FORM), GROUND),
+    "/cast Revive Battle Pets\n" .. GROUND)
 
 -- Our block holds its position when the player's lines sit below it.
 check("player line below stays below",
