@@ -1,3 +1,8 @@
+## [1.9.3] - 2026-08-13
+
+### Added
+- **Put Lucky's Character Mount on a panel addon.** The addon now lists itself in Titan Panel, Bazooka and ChocolateBar, so its button can sit on a bar instead of the minimap.
+
 ## [1.9.2] - 2026-08-12
 
 ### Fixed
