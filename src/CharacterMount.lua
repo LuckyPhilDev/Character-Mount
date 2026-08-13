@@ -1192,6 +1192,7 @@ function CharacterMount.InitMinimapButton()
 
     CharacterMount.minimapButton = LuckyMinimap:Create({
         name    = "CharacterMountMinimapButton",
+        tocname = "Luckys_Character_Mount",
         icon    = MACRO_ICON,
         dbKey   = "minimap",
         db      = CharacterMountDB,
