@@ -22,6 +22,15 @@ local function CurrentMonthOffset(now)
     return (now.year * 12 + now.month) - (viewed.year * 12 + viewed.month)
 end
 
+-- Personal calendar entries (guild events, invites) come back as secret values
+-- to tainted addon code, and comparing or printing one errors. Skip those
+-- events: a title that cannot be read is not a holiday we could match anyway.
+local function ReadableDayEvent(offset, day, index)
+    local e = C_Calendar.GetDayEvent(offset, day, index)
+    if not e or issecretvalue(e.calendarType) or issecretvalue(e.title) then return nil end
+    return e
+end
+
 local function Rebuild()
     if not (C_DateAndTime and C_Calendar) then return end
     local now = C_DateAndTime.GetCurrentCalendarTime()
@@ -31,7 +40,7 @@ local function Rebuild()
     local count  = C_Calendar.GetNumDayEvents(offset, now.monthDay) or 0
     local titles = {}
     for i = 1, count do
-        local e = C_Calendar.GetDayEvent(offset, now.monthDay, i)
+        local e = ReadableDayEvent(offset, now.monthDay, i)
         -- A HOLIDAY event listed on today's date runs today, whatever its
         -- sequenceType (START / ONGOING / END all touch the current day).
         if e and e.calendarType == "HOLIDAY" and e.title then
@@ -56,7 +65,7 @@ local function DumpViewedMonth()
     print(string.format("Character Mount calendar %d-%02d:", info.year, info.month))
     for day = 1, info.numDays do
         for i = 1, (C_Calendar.GetNumDayEvents(0, day) or 0) do
-            local e = C_Calendar.GetDayEvent(0, day, i)
+            local e = ReadableDayEvent(0, day, i)
             -- Raid resets and lockouts crowd out the events we care about.
             if e and e.calendarType ~= "RAID_LOCKOUT" and e.calendarType ~= "RAID_RESET" then
                 print(string.format("  %02d  %-9s %-8s %s",
@@ -104,7 +113,7 @@ function CharacterMount.ScanYearEvents()
         if not info then return end
         for day = 1, info.numDays do
             for i = 1, (C_Calendar.GetNumDayEvents(0, day) or 0) do
-                local e = C_Calendar.GetDayEvent(0, day, i)
+                local e = ReadableDayEvent(0, day, i)
                 if e and e.calendarType == "HOLIDAY" and e.title and not seen[e.title] then
                     seen[e.title] = true
                     titles[#titles + 1] = e.title
