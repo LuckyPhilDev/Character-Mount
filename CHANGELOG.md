@@ -1,3 +1,8 @@
+## [1.9.4] - 2026-08-14
+
+### Fixed
+- Holiday mounts are rolled again while their event is running, even when your calendar has a guild or personal event on the same day.
+
 ## [1.9.3] - 2026-08-13
 
 ### Added
