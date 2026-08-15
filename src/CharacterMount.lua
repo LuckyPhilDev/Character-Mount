@@ -1192,13 +1192,15 @@ end
 -- Minimap button
 -- ---------------------------------------------------------------------------
 
+local MINIMAP_ICON = "Interface\\AddOns\\Luckys_Utils\\Media\\promo-character-mount.tga"
+
 function CharacterMount.InitMinimapButton()
     if not LuckyMinimap then return end
 
     CharacterMount.minimapButton = LuckyMinimap:Create({
         name    = "CharacterMountMinimapButton",
         tocname = "Luckys_Character_Mount",
-        icon    = MACRO_ICON,
+        icon    = MINIMAP_ICON,
         dbKey   = "minimap",
         db      = CharacterMountDB,
         defaultAngle = 200,
