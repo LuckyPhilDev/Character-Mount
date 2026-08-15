@@ -1,34 +1,8 @@
-## [1.9.4] - 2026-08-14
-
-### Fixed
-- Holiday mounts are rolled again while their event is running, even when your calendar has a guild or personal event on the same day.
-
-## [1.9.3] - 2026-08-13
+## [1.10.0] - 2026-08-15
 
 ### Added
-- **Put Lucky's Character Mount on a panel addon.** The addon now lists itself in Titan Panel, Bazooka and ChocolateBar, so its button can sit on a bar instead of the minimap.
-
-## [1.9.2] - 2026-08-12
-
-### Fixed
-- Lines you add to the CharMount and CharMountGround macros yourself are no longer wiped when you press them. (Thanks for the suggestion Tuulani)
-
-## [1.9.1] - 2026-08-12
+- **See what's new in the settings panel.** The panel opens on a What's New list, with a card for each recently added setting that takes you to it.
 
 ### Improved
-- **Updated for patch 12.1.** The addon no longer shows as out of date in your addon list.
-
-## [1.9.0] - 2026-07-25
-
-### Added
-- Excluded mounts can now be removed for good. Each row in the Excluded section has an X button that clears the mount out entirely, instead of leaving it sitting there forever. (Thanks for the suggestion Tuulani)
-- New "Holiday mount chance" slider in settings. Set how often a holiday mount comes up while its event is running, anywhere from 10% to 100% of your rolls. Previously this was fixed.
-- New "Include micro-holidays" toggle adds the short events to the holiday list, such as Un'Goro Madness, Trial of Style, and the bonus event weeks.
-- New "Get Default Macro" button in settings puts the standard mount macro on your cursor, ready to drop onto an action bar. No more remembering the slash command.
-- Settings panel now shows the addon version and a Discord link, so it is easier to check what you are running and get in touch.
-
-### Fixed
-- Restoring a mount from the Excluded section now brings back its spec, count-as type, and holiday settings, instead of starting from scratch. (Thanks for the suggestion Tuulani)
-
-### Improved
-- Settings are reorganised into clearer groups, so mount, macro, and holiday options are easier to find.
+- **Toggle Debug mode and the minimap button from the title bar.** Both are icon buttons in the settings panel's title bar now, in place of the General tab that held them.
+- **Read the addon's version in the settings title bar.** It sits beside the addon name, and the Discord link has moved into the row of addon icons at the bottom of the panel.
