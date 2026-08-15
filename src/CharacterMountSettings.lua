@@ -11,29 +11,6 @@ local ROW_HEIGHT = 26
 local ROW_GAP    = 2
 local INITIAL_POOL = 20
 
-local DISCORD_URL = "discord.gg/ptTtYyAjdZ"
-
-StaticPopupDialogs["CHARACTERMOUNT_COPY_DISCORD"] = {
-    text         = "Copy the Discord link:",
-    button1      = CLOSE,
-    hasEditBox   = 1,
-    editBoxWidth = 220,
-    OnShow = function(self)
-        local editBox = self.editBox or _G[self:GetName() .. "EditBox"]
-        editBox:SetMaxLetters(0)
-        editBox:SetText("https://" .. DISCORD_URL)
-        editBox:HighlightText()
-        editBox:SetFocus()
-    end,
-    OnHide = function(self)
-        local editBox = self.editBox or _G[self:GetName() .. "EditBox"]
-        editBox:SetText("")
-    end,
-    timeout      = 0,
-    whileDead    = true,
-    hideOnEscape = true,
-}
-
 local function HolidayNote(titles)
     return "Covers: " .. table.concat(titles, ", ") .. "."
 end
@@ -131,11 +108,6 @@ function CharacterMount.InitSettings()
     general:BottomLabel({
         label = "Lucky's Utils",
         value = "v" .. (C_AddOns.GetAddOnMetadata("Luckys_Utils", "Version") or "?"),
-    })
-    general:BottomLink({
-        label   = "Discord",
-        value   = "|A:chatframe-button-copy:11:11|a " .. DISCORD_URL,
-        onClick = function() StaticPopup_Show("CHARACTERMOUNT_COPY_DISCORD") end,
     })
     LuckyPromo:AddToRichGroup(general, "Luckys_Character_Mount")
 
