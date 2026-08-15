@@ -5,6 +5,11 @@ CharacterMount = CharacterMount or {}
 local ADDON_NAME = "Luckys_Character_Mount"
 local PREFIX     = LuckyUI.WC.goldAccent .. "CharMount:" .. LuckyUI.WC.reset
 
+-- Settings panel: any setting flagged with a `since` version at or above this
+-- gets a "NEW" badge and appears in the What's New group. Bump this each
+-- release cycle so only recent features are highlighted.
+CharacterMount.WHATS_NEW_MIN_VERSION = "1.9.0"
+
 -- Chat warnings for blocked mount attempts. Mashing the macro while waiting
 -- for combat to drop would otherwise flood chat, so repeats of the same
 -- message are dropped for a few seconds.

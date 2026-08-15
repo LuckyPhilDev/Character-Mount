@@ -77,39 +77,31 @@ function CharacterMount.InitSettings()
     local db = CharacterMount.db
     if not db then return end
 
-    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount")
+    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount", {
+        addonFolder   = "Luckys_Character_Mount",
+        minVersion    = CharacterMount.WHATS_NEW_MIN_VERSION,
+        devMode       = {
+            label    = "Debug mode",
+            desc     = "Print detailed mount selection diagnostics to chat.",
+            checked  = function() return CharacterMountDB.debugMode end,
+            onToggle = function(checked) CharacterMountDB.debugMode = checked end,
+        },
+        minimapButton = {
+            label    = "Minimap button",
+            desc     = "Show the Character Mount button on the minimap.",
+            checked  = function() return not (CharacterMountDB.minimap or {}).hide end,
+            onToggle = function(checked)
+                if CharacterMount.minimapButton then
+                    CharacterMount.minimapButton:SetShown_Persisted(checked)
+                end
+            end,
+        },
+    })
     CharacterMount.settingsCategory = panel.category
 
-    local general = panel:Group("General")
-    general:Toggle({
-        label    = "Debug mode",
-        desc     = "Print detailed mount selection diagnostics to chat.",
-        checked  = CharacterMountDB.debugMode or false,
-        onToggle = function(checked) CharacterMountDB.debugMode = checked end,
-    })
-
-    local minimapState = CharacterMountDB.minimap or {}
-    general:Toggle({
-        label    = "Minimap button",
-        desc     = "Show the Character Mount button on the minimap.",
-        checked  = not minimapState.hide,
-        onToggle = function(checked)
-            if CharacterMount.minimapButton then
-                CharacterMount.minimapButton:SetShown_Persisted(checked)
-            end
-        end,
-    })
-
-    general:BottomSection("Version info")
-    general:BottomLabel({
-        label = "Character Mount",
-        value = "v" .. (C_AddOns.GetAddOnMetadata("Luckys_Character_Mount", "Version") or "?"),
-    })
-    general:BottomLabel({
-        label = "Lucky's Utils",
-        value = "v" .. (C_AddOns.GetAddOnMetadata("Luckys_Utils", "Version") or "?"),
-    })
-    LuckyPromo:AddToRichGroup(general, "Luckys_Character_Mount")
+    -- Debug mode and the minimap button live in the title bar now, so this
+    -- group exists to host the What's New list.
+    panel:Group("What's New")
 
     local preferences = panel:Group("Preferences")
 
@@ -149,6 +141,7 @@ function CharacterMount.InitSettings()
         desc     = "Adds the short events to that submenu too, such as Un'Goro Madness, Trial of Style, and the bonus event weeks.",
         note     = HolidayNote(CharacterMount.MountData.MICRO_HOLIDAYS),
         parent   = "Assign mounts to holidays",
+        since    = "1.9.0",
         checked  = CharacterMountDB.microHolidaysEnabled or false,
         onToggle = function(checked)
             CharacterMountDB.microHolidaysEnabled = checked
@@ -159,6 +152,7 @@ function CharacterMount.InitSettings()
         label    = "Holiday mount chance",
         desc     = "While a holiday is running, this is the chance each roll picks one of that holiday's mounts. The rest of the time a normal mount is chosen.",
         parent   = "Assign mounts to holidays",
+        since    = "1.9.0",
         min      = 10,
         max      = 100,
         step     = 5,
@@ -176,6 +170,7 @@ function CharacterMount.InitSettings()
         label   = "Get Default Macro",
         desc    = "Puts the standard mount macro on your cursor. Drop it on an action bar to summon a random mount suited to where you are.",
         tooltip = "Creates the default macro that rolls a mount for your current location, then places it on your cursor ready to drop onto a bar.",
+        since   = "1.9.0",
         width   = 160,
         onClick = function()
             CharacterMount.CreateMacro()
@@ -316,8 +311,6 @@ function CharacterMount.InitSettings()
     end
 
     panel:OnOpen(function()
-        general.byLabel["Debug mode"].checkbox:SetChecked(CharacterMountDB.debugMode or false)
-        general.byLabel["Minimap button"].checkbox:SetChecked(not (CharacterMountDB.minimap or {}).hide)
         macros.byLabel["Silence mount warnings"].checkbox:SetChecked(CharacterMountDB.quietMountWarnings or false)
         macros.byLabel["Allow dismount while flying"].checkbox:SetChecked(CharacterMountDB.allowFlyingDismount or false)
         preferences.byLabel["Prompt on New Mount"].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
@@ -327,6 +320,9 @@ function CharacterMount.InitSettings()
         preferences.byLabel["Holiday mount chance"].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
         RefreshMountList()
     end)
+
+    panel:Finalize()
+    LuckyPromo:AddToRichGroup(panel.whatsNewGroup, "Luckys_Character_Mount")
 end
 
 -- ---------------------------------------------------------------------------
