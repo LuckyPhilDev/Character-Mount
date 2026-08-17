@@ -295,9 +295,11 @@ local function ClearMountSettings(mountID)
 end
 
 --- Stash a mount's per-mount settings so a later restore can bring them back.
+--- Must run before the mount leaves db.additions, or the source tag is lost.
 local function PreserveMountSettings(mountID)
     db.preservedSettings = db.preservedSettings or {}
     db.preservedSettings[mountID] = {
+        source         = db.additions and db.additions[mountID],
         specExclusions = db.specExclusions and db.specExclusions[mountID],
         mountTypes     = db.mountTypes and db.mountTypes[mountID],
         holidayOnly    = db.holidayOnly and db.holidayOnly[mountID],
@@ -308,6 +310,7 @@ end
 local function RestoreMountSettings(mountID)
     local saved = db.preservedSettings and db.preservedSettings[mountID]
     if not saved then return end
+    if saved.source then db.additions[mountID] = saved.source end
     db.specExclusions[mountID] = saved.specExclusions
     db.mountTypes[mountID]     = saved.mountTypes
     db.holidayOnly[mountID]    = saved.holidayOnly
@@ -771,9 +774,9 @@ function CharacterMount.RemoveMount(mountID)
     else
         name = C_MountJournal.GetMountInfoByID(mountID) or S.forms.genericMount
     end
+    PreserveMountSettings(mountID)
     db.additions[mountID]  = nil
     db.exclusions[mountID] = true
-    PreserveMountSettings(mountID)
     ClearMountSettings(mountID)
     print(PREFIX .. " " .. S.mounts.removed:format(name))
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end

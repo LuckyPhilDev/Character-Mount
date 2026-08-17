@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Fixed
+- A mount restored from the Excluded list keeps its Racial, Class or other source label instead of coming back as Manual.
+
 ## [1.14.0] - 2026-09-15
 
 ### Added
