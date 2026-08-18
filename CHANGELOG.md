@@ -1,13 +1,5 @@
-## [1.10.1] - 2026-08-16
+## [1.11.0] - 2026-08-18
 
 ### Improved
-- **New icon on the minimap button.** The button carries the addon's own artwork now, and the icons in the More from Lucky Phil row in settings are new to match.
-
-## [1.10.0] - 2026-08-15
-
-### Added
-- **See what's new in the settings panel.** The panel opens on a What's New list, with a card for each recently added setting that takes you to it.
-
-### Improved
-- **Toggle Debug mode and the minimap button from the title bar.** Both are icon buttons in the settings panel's title bar now, in place of the General tab that held them.
-- **Read the addon's version in the settings title bar.** It sits beside the addon name, and the Discord link has moved into the row of addon icons at the bottom of the panel.
+- **Under the hood** A tidy-up of the addon's internals. Nothing changes in how it looks or plays.
+- **Lucky's Utils bundled** The shared library now ships inside the addon, so there is no separate download from CurseForge. If you have the standalone Lucky's Utils installed, you can remove it as long as no other Lucky addon still needs it.
