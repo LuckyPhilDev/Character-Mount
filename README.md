@@ -32,7 +32,7 @@
 
 ### How to Use
 
-1. Install the addon (requires **Lucky's Utils** dependency).
+1. Install the addon.
 2. Log in. The onboarding wizard appears automatically for new characters.
 3. Select the mounts you want and click **Add Selected**.
 4. Type `/cmount macro` to create an action bar macro, then drag it to your bar.
