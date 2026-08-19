@@ -7,6 +7,7 @@ end
 
 LuckyUI = { C = stubTable(), WC = stubTable() }
 LuckyLog = { New = function() return noop end }
+function LuckyMedia(file) return file end
 SlashCmdList = {}
 CharacterMount_MOUNT_TYPE = { NONE = "none", GROUND = "ground", FLYING = "flying", WATER = "water" }
 CharacterMountDB = {}
