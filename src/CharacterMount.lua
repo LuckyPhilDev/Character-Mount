@@ -3,7 +3,8 @@
 CharacterMount = CharacterMount or {}
 
 local ADDON_NAME = "Luckys_Character_Mount"
-local PREFIX     = LuckyUI.WC.goldAccent .. "CharMount:" .. LuckyUI.WC.reset
+local S          = CharacterMount.Strings
+local PREFIX     = LuckyUI.WC.goldAccent .. S.addon.prefix .. LuckyUI.WC.reset
 
 -- Settings panel: any setting flagged with a `since` version at or above this
 -- gets a "NEW" badge and appears in the What's New group. Bump this each
@@ -42,14 +43,14 @@ CharacterMount.SourceColor = {
 }
 
 CharacterMount.SourceLabel = {
-    racial          = "Racial",
-    class           = "Class",
-    class_form      = "Class",
-    manual          = "Manual",
-    suggested_class = "Suggested",
-    suggested_race  = "Racial",
-    rare            = "Rare",
-    shop            = "Shop",
+    racial          = S.sources.racial,
+    class           = S.sources.class,
+    class_form      = S.sources.class,
+    manual          = S.sources.manual,
+    suggested_class = S.sources.suggested,
+    suggested_race  = S.sources.racial,
+    rare            = S.sources.rare,
+    shop            = S.sources.shop,
 }
 
 -- RGB values for pill/tag backgrounds (matched to SourceColor)
@@ -70,9 +71,9 @@ CharacterMount.SourcePillRGB = {
 -- Travel Form (783) adapts to context: flight in flyable areas, cheetah on
 -- ground, aquatic in water — so a single entry with category "all" is correct.
 CharacterMount.FORM_SPELLS = {
-    DRUID_TRAVEL    = { spellID = 783,    name = "Travel Form",  category = "all" },
-    DRACTHYR_SOAR   = { spellID = 369536, name = "Soar",         category = "flying" },
-    WORGEN_RUNNING  = { spellID = 87840,  name = "Running Wild",  category = "ground" },
+    DRUID_TRAVEL    = { spellID = 783,    name = S.forms.travelForm,  category = "all" },
+    DRACTHYR_SOAR   = { spellID = 369536, name = S.forms.soar,        category = "flying" },
+    WORGEN_RUNNING  = { spellID = 87840,  name = S.forms.runningWild, category = "ground" },
 }
 
 -- Reverse lookup: spellID → category (used by MountRandom for type matching)
@@ -328,9 +329,9 @@ end
 -- so only mounts the player has customised take up saved-variable space.
 
 local TYPE_OPTIONS = {
-    { key = CharacterMount_MOUNT_TYPE.GROUND, label = "Ground" },
-    { key = CharacterMount_MOUNT_TYPE.FLYING, label = "Flying" },
-    { key = CharacterMount_MOUNT_TYPE.WATER,  label = "Water"  },
+    { key = CharacterMount_MOUNT_TYPE.GROUND, label = S.mountTypes.ground },
+    { key = CharacterMount_MOUNT_TYPE.FLYING, label = S.mountTypes.flying },
+    { key = CharacterMount_MOUNT_TYPE.WATER,  label = S.mountTypes.water  },
 }
 
 local function GetMountTypeID(mountID)
@@ -514,7 +515,7 @@ function CharacterMount.ShowSpecMenu(anchor, mountID)
 
     MenuUtil.CreateContextMenu(anchor, function(_, root)
         if #specs > 0 then
-            root:CreateTitle("Use this mount for:")
+            root:CreateTitle(S.menu.useForSpecs)
             for _, spec in ipairs(specs) do
                 root:CreateCheckbox(spec.name,
                     function()
@@ -534,11 +535,11 @@ function CharacterMount.ShowSpecMenu(anchor, mountID)
         local canFly   = natural[CharacterMount_MOUNT_TYPE.FLYING]
 
         if #specs > 0 then root:CreateDivider() end
-        root:CreateTitle("Count as:")
+        root:CreateTitle(S.menu.countAs)
         for _, option in ipairs(TYPE_OPTIONS) do
             local label = option.label
             if natural[option.key] then
-                label = label .. LuckyUI.WC.textMuted .. " (default)" .. LuckyUI.WC.reset
+                label = label .. LuckyUI.WC.textMuted .. S.menu.defaultSuffix .. LuckyUI.WC.reset
             end
             root:CreateCheckbox(label,
                 function()
@@ -553,12 +554,12 @@ function CharacterMount.ShowSpecMenu(anchor, mountID)
 
         if not canFly and CharacterMount.IsMountCountedAs(mountID, CharacterMount_MOUNT_TYPE.FLYING) then
             root:CreateTitle(LuckyUI.WC.danger
-                .. "Summoned when flying, but it cannot fly" .. LuckyUI.WC.reset)
+                .. S.menu.flyingButCannotFly .. LuckyUI.WC.reset)
         end
 
         if CharacterMountDB.holidayAssignEnabled then
             root:CreateDivider()
-            local sub = root:CreateButton("Only during a holiday")
+            local sub = root:CreateButton(S.menu.onlyDuringHoliday)
             for _, title in ipairs(CharacterMount.GetAssignableHolidays(mountID)) do
                 sub:CreateCheckbox(title,
                     function()
@@ -594,19 +595,19 @@ function CharacterMount.ShowSpecButtonTooltip(button, mountID)
 
     local specs = CharacterMount.GetCharacterSpecs()
     if #specs > 0 then
-        GameTooltip:AddLine("Available for specs")
+        GameTooltip:AddLine(S.specTooltip.availableForSpecs)
         for _, spec in ipairs(specs) do
             if CharacterMount.IsMountEnabledForSpec(mountID, spec.id) then
                 GameTooltip:AddLine(spec.name, 0.45, 0.85, 0.45)
             else
-                GameTooltip:AddLine(spec.name .. " (off)", 0.75, 0.4, 0.4)
+                GameTooltip:AddLine(spec.name .. S.specTooltip.specOffSuffix, 0.75, 0.4, 0.4)
             end
         end
     end
 
     if type(mountID) == "number" then
         if #specs > 0 then GameTooltip:AddLine(" ") end
-        GameTooltip:AddLine("Counts as")
+        GameTooltip:AddLine(S.specTooltip.countsAs)
         local any = false
         for _, option in ipairs(TYPE_OPTIONS) do
             if CharacterMount.IsMountCountedAs(mountID, option.key) then
@@ -615,7 +616,7 @@ function CharacterMount.ShowSpecButtonTooltip(button, mountID)
             end
         end
         if not any then
-            GameTooltip:AddLine("Nothing selected", 0.75, 0.4, 0.4)
+            GameTooltip:AddLine(S.specTooltip.nothingSelected, 0.75, 0.4, 0.4)
         end
 
         local gates = CharacterMount.GetHolidayGates(mountID)
@@ -623,15 +624,15 @@ function CharacterMount.ShowSpecButtonTooltip(button, mountID)
             GameTooltip:AddLine(" ")
             for title in pairs(gates) do
                 if CharacterMount.IsHolidayActive(title) then
-                    GameTooltip:AddLine("Only during " .. title .. " (active now)", 0.45, 0.85, 0.45)
+                    GameTooltip:AddLine(S.specTooltip.onlyDuringActive:format(title), 0.45, 0.85, 0.45)
                 else
-                    GameTooltip:AddLine("Only during " .. title .. " (not running)", 0.75, 0.4, 0.4)
+                    GameTooltip:AddLine(S.specTooltip.onlyDuringIdle:format(title), 0.75, 0.4, 0.4)
                 end
             end
         end
     end
 
-    GameTooltip:AddLine("Click to change", 0.6, 0.6, 0.6)
+    GameTooltip:AddLine(S.specTooltip.clickToChange, 0.6, 0.6, 0.6)
     GameTooltip:Show()
 end
 
@@ -642,14 +643,14 @@ end
 function CharacterMount.AddMount(mountID)
     local name = C_MountJournal.GetMountInfoByID(mountID)
     if not name then
-        print(PREFIX .. " Invalid mount ID: " .. tostring(mountID))
+        print(PREFIX .. " " .. S.mounts.invalidID:format(tostring(mountID)))
         return false
     end
     db.exclusions[mountID] = nil
     db.additions[mountID]  = "manual"
     ClearMountSettings(mountID)
     ForgetPreservedSettings(mountID)
-    print(PREFIX .. " Added " .. name .. " to your list.")
+    print(PREFIX .. " " .. S.mounts.added:format(name))
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
     return true
@@ -667,7 +668,7 @@ function CharacterMount.AddMountToAllCharacters(mountID)
             if data.mountTypes then data.mountTypes[mountID] = nil end
         end
     end
-    print(PREFIX .. " Added " .. name .. " to all character lists.")
+    print(PREFIX .. " " .. S.mounts.addedAllChars:format(name))
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
     return true
@@ -679,15 +680,15 @@ function CharacterMount.RemoveMount(mountID)
     local spellID = type(mountID) == "string" and tonumber(mountID:match("^spell:(%d+)$"))
     if spellID then
         local spellInfo = C_Spell.GetSpellInfo(spellID)
-        name = spellInfo and spellInfo.name or "form"
+        name = spellInfo and spellInfo.name or S.forms.genericForm
     else
-        name = C_MountJournal.GetMountInfoByID(mountID) or "mount"
+        name = C_MountJournal.GetMountInfoByID(mountID) or S.forms.genericMount
     end
     db.additions[mountID]  = nil
     db.exclusions[mountID] = true
     PreserveMountSettings(mountID)
     ClearMountSettings(mountID)
-    print(PREFIX .. " Removed " .. name .. " from your list.")
+    print(PREFIX .. " " .. S.mounts.removed:format(name))
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
 end
@@ -757,7 +758,7 @@ function CharacterMount.MountRandom(forcedCategory)
 
     if IsMounted() then
         if IsFlying() and not CharacterMountDB.allowFlyingDismount then
-            Warn("Flying, cannot dismount. Enable in settings to allow this.")
+            Warn(S.warnings.cannotDismountFlying)
         else
             devLog("Dismounting.")
             Dismount()
@@ -776,22 +777,22 @@ function CharacterMount.MountRandom(forcedCategory)
     end
 
     if InCombatLockdown() and not IsCombatMountZone() then
-        Warn("In combat, cannot mount.")
+        Warn(S.warnings.inCombat)
         return
     end
 
     if UnitIsDeadOrGhost("player") then
-        Warn("Dead, cannot mount.")
+        Warn(S.warnings.dead)
         return
     end
 
     if UnitInVehicle("player") or UnitOnTaxi("player") then
-        Warn("In vehicle or on taxi.")
+        Warn(S.warnings.inVehicle)
         return
     end
 
     if IsIndoors() then
-        Warn("Indoors, cannot mount.")
+        Warn(S.warnings.indoors)
         return
     end
 
@@ -1083,7 +1084,7 @@ end
 
 local function CreateMacroFromSpec(spec)
     if InCombatLockdown() then
-        print(PREFIX .. " Cannot create macro during combat.")
+        print(PREFIX .. " " .. S.macro.combatBlocked)
         return
     end
 
@@ -1092,17 +1093,17 @@ local function CreateMacroFromSpec(spec)
     local idx = GetMacroIndexByName(spec.name)
     if idx and idx > 0 then
         WriteMacroBody(idx, body)
-        print(PREFIX .. " Macro '" .. spec.name .. "' updated. Drag it to your action bar.")
+        print(PREFIX .. " " .. S.macro.updated:format(spec.name))
         PickupMacro(spec.name)
         return
     end
 
     local macroID = CreateMacro(spec.name, spec.icon, body, nil)
     if macroID then
-        print(PREFIX .. " Created macro '" .. spec.name .. "'. Drag it to your action bar.")
+        print(PREFIX .. " " .. S.macro.created:format(spec.name))
         PickupMacro(spec.name)
     else
-        print(PREFIX .. " Cannot create macro — macro limit reached.")
+        print(PREFIX .. " " .. S.macro.limitReached)
     end
 end
 
@@ -1125,7 +1126,7 @@ end
 
 function CharacterMount.HookMountJournalMenu()
     if not Menu or not Menu.ModifyMenu then
-        print(PREFIX .. " Menu API not available — right-click integration disabled.")
+        print(PREFIX .. " " .. S.macro.menuAPIMissing)
         return
     end
 
@@ -1141,11 +1142,11 @@ function CharacterMount.HookMountJournalMenu()
         rootDescription:CreateDivider()
 
         if db.additions[mountID] then
-            rootDescription:CreateButton("Remove from Character List", function()
+            rootDescription:CreateButton(S.menu.removeFromList, function()
                 CharacterMount.RemoveMount(mountID)
             end)
         elseif db.exclusions[mountID] then
-            rootDescription:CreateButton("Re-enable in Character List", function()
+            rootDescription:CreateButton(S.menu.reenableInList, function()
                 CharacterMount.UnexcludeMount(mountID)
             end)
         else
@@ -1157,11 +1158,11 @@ function CharacterMount.HookMountJournalMenu()
                 end
             end
             if isAuto then
-                rootDescription:CreateButton("Exclude from Character List", function()
+                rootDescription:CreateButton(S.menu.excludeFromList, function()
                     CharacterMount.RemoveMount(mountID)
                 end)
             else
-                rootDescription:CreateButton("Add to Character List", function()
+                rootDescription:CreateButton(S.menu.addToList, function()
                     CharacterMount.AddMount(mountID)
                 end)
             end
@@ -1207,8 +1208,8 @@ function CharacterMount.InitMinimapButton()
         onClick = function(_, mouseBtn)
             if mouseBtn == "MiddleButton" then
                 CharacterMountDB.debugMode = not CharacterMountDB.debugMode
-                local state = CharacterMountDB.debugMode and "ON" or "OFF"
-                print(PREFIX .. " Dev mode: " .. state)
+                local state = CharacterMountDB.debugMode and S.minimap.devModeOn or S.minimap.devModeOff
+                print(PREFIX .. " " .. S.minimap.devMode:format(state))
             elseif mouseBtn == "RightButton" then
                 CharacterMount.OpenSettings()
             else
@@ -1224,12 +1225,12 @@ function CharacterMount.InitMinimapButton()
             end
         end,
         tooltip = function(tt)
-            tt:AddLine("Lucky's Character Mount")
+            tt:AddLine(S.minimap.tooltipTitle)
             tt:AddLine(" ")
-            tt:AddLine("Left-click: Open mount list", 0.9, 0.8, 0.5)
-            tt:AddLine("Right-click: Open settings", 0.9, 0.8, 0.5)
-            tt:AddLine("Middle-click: Toggle dev mode", 0.9, 0.8, 0.5)
-            tt:AddLine("Drag: Move button", 0.54, 0.49, 0.41)
+            tt:AddLine(S.minimap.leftClick, 0.9, 0.8, 0.5)
+            tt:AddLine(S.minimap.rightClick, 0.9, 0.8, 0.5)
+            tt:AddLine(S.minimap.middleClick, 0.9, 0.8, 0.5)
+            tt:AddLine(S.minimap.drag, 0.54, 0.49, 0.41)
         end,
     })
 end
@@ -1295,7 +1296,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         db.mountTypes     = {}
         db.preservedSettings = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
-        print(PREFIX .. " All exclusions cleared.")
+        print(PREFIX .. " " .. S.slash.exclusionsCleared)
     elseif lower == "reset all" then
         db.exclusions     = {}
         db.additions      = {}
@@ -1303,7 +1304,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         db.mountTypes     = {}
         db.preservedSettings = {}
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
-        print(PREFIX .. " All exclusions and manual additions cleared.")
+        print(PREFIX .. " " .. S.slash.allCleared)
     elseif lower == "reset onboarding" then
         CharacterMount.ResetOnboarding()
     elseif lower:sub(1, 4) == "add " then
@@ -1314,13 +1315,13 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         else
             local matches = FindMountsByName(arg)
             if #matches == 0 then
-                print(PREFIX .. " No collected mount found matching '" .. arg .. "'.")
+                print(PREFIX .. " " .. S.slash.noMatch:format(arg))
             elseif #matches == 1 then
                 CharacterMount.AddMount(matches[1].id)
             else
-                print(PREFIX .. " Multiple matches — use /cmount add <id>:")
+                print(PREFIX .. " " .. S.slash.multipleAdd)
                 for _, m in ipairs(matches) do
-                    print(string.format("  [%d] %s", m.id, m.name))
+                    print(S.slash.matchLine:format(m.id, m.name))
                 end
             end
         end
@@ -1332,13 +1333,13 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         else
             local matches = FindMountsByName(arg)
             if #matches == 0 then
-                print(PREFIX .. " No collected mount found matching '" .. arg .. "'.")
+                print(PREFIX .. " " .. S.slash.noMatch:format(arg))
             elseif #matches == 1 then
                 CharacterMount.RemoveMount(matches[1].id)
             else
-                print(PREFIX .. " Multiple matches — use /cmount remove <id>:")
+                print(PREFIX .. " " .. S.slash.multipleRemove)
                 for _, m in ipairs(matches) do
-                    print(string.format("  [%d] %s", m.id, m.name))
+                    print(S.slash.matchLine:format(m.id, m.name))
                 end
             end
         end
@@ -1350,10 +1351,10 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
         local arg = msg:sub(11):match("^%s*(.-)%s*$")
         local mountID = tonumber(arg) or CharacterMount.GetSampleMountID()
         if mountID and CharacterMount.ShowNewMountDialog then
-            print(PREFIX .. " Testing new-mount popup with mount ID " .. mountID .. ".")
+            print(PREFIX .. " " .. S.slash.testPopup:format(mountID))
             CharacterMount.ShowNewMountDialog(mountID)
         else
-            print(PREFIX .. " No sample mount available. Usage: /cmount testpopup <id>")
+            print(PREFIX .. " " .. S.slash.noSampleMount)
         end
     elseif lower:sub(1, 11) == "testunlock " then
         local arg = msg:sub(12):match("^%s*(.-)%s*$")
@@ -1363,7 +1364,7 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
                 CharacterMount.ShowNewMountDialog(mountID)
             end
         else
-            print(PREFIX .. " Please provide a valid mount ID. Usage: /cmount testunlock <id>")
+            print(PREFIX .. " " .. S.slash.needMountID)
         end
     elseif lower == "sources" or lower:sub(1, 8) == "sources " then
         -- Dev probe: does the journal expose a usable "In-Game Shop" source flag?
@@ -1478,19 +1479,8 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
             print("  effective list: " .. #effective .. " mounts")
         end
     else
-        print(PREFIX .. " Usage:")
-        print("  /cmount              — open/close UI")
-        print("  /cmount add <name>   — add mount by name (partial ok)")
-        print("  /cmount add <id>     — add mount by ID")
-        print("  /cmount remove <name|id>")
-        print("  /cmount macro        — create action bar macro")
-        print("  /cmount groundmacro  — create ground-only macro")
-        print("  /cmount mount        — mount now")
-        print("  /cmount settings         — open settings panel")
-        print("  /cmount reset            — clear all exclusions")
-        print("  /cmount reset all        — clear exclusions and manual additions")
-        print("  /cmount reset onboarding — reset and re-trigger onboarding")
-        print("  /cmount debug            — show saved state for this character")
+        print(PREFIX .. " " .. S.slash.usageTitle)
+        for _, line in ipairs(S.slash.usage) do print(line) end
     end
 end
 

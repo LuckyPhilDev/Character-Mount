@@ -7,6 +7,7 @@ end
 
 LuckyUI = { C = stubTable(), WC = stubTable() }
 LuckyLog = { New = function() return noop end }
+LuckyStrings = { New = function(_, tbl) return tbl end }
 function LuckyMedia(file) return file end
 SlashCmdList = {}
 CharacterMount_MOUNT_TYPE = { NONE = "none", GROUND = "ground", FLYING = "flying", WATER = "water" }
@@ -25,6 +26,7 @@ C_Spell = {
     end,
 }
 
+dofile("src/Strings.lua")
 dofile("src/CharacterMount.lua")
 
 local Merge = CharacterMount.MergeMacroBody

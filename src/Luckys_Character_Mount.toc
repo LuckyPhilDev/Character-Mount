@@ -8,6 +8,7 @@
 ## X-Curse-Project-ID: 1492089
 
 Libs\LuckysUtils\embeds.xml
+Strings.lua
 CharacterMountHelpers.lua
 MountData.lua
 CharacterMountHolidays.lua

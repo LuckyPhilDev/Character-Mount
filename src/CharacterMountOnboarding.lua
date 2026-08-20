@@ -7,7 +7,8 @@ CharacterMount = CharacterMount or {}
 local C  = LuckyUI.C
 local WC = LuckyUI.WC
 
-local PREFIX = WC.goldAccent .. "CharMount:" .. WC.reset
+local S      = CharacterMount.Strings
+local PREFIX = WC.goldAccent .. S.addon.prefix .. WC.reset
 
 -- ---------------------------------------------------------------------------
 -- Constants
@@ -256,7 +257,7 @@ local function CreateCheckboxRow(parent, rowWidth)
     row:SetScript("OnEnter", function(self)
         if not self.entryRef or type(self.entryRef.id) ~= "number" then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("Click to preview this mount.", 0.9, 0.85, 0.65, true)
+        GameTooltip:AddLine(S.onboarding.clickToPreview, 0.9, 0.85, 0.65, true)
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -376,7 +377,7 @@ function CharacterMount.ShowOnboarding()
     tinsert(UISpecialFrames, "CharacterMount_OnboardingFrame")
 
     -- Header
-    LuckyUI.CreateHeader(frame, "Set Up Your Mounts")
+    LuckyUI.CreateHeader(frame, S.onboarding.title)
 
     -- Subtitle with character name, race, class (class-coloured)
     local localRace              = UnitRace("player")
@@ -387,7 +388,8 @@ function CharacterMount.ShowOnboarding()
     local subtitle = frame:CreateFontString(nil, "OVERLAY")
     subtitle:SetFont(LuckyUI.BODY_FONT, 13)
     subtitle:SetPoint("TOPLEFT", frame.header, "BOTTOMLEFT", 12, -8)
-    subtitle:SetText("|c" .. colourHex .. playerName .. " - " .. localRace .. " " .. localClass .. WC.reset)
+    subtitle:SetText("|c" .. colourHex
+        .. S.onboarding.subtitle:format(playerName, localRace, localClass) .. WC.reset)
 
     -- Description blurb
     local blurb = frame:CreateFontString(nil, "OVERLAY")
@@ -397,10 +399,7 @@ function CharacterMount.ShowOnboarding()
     blurb:SetPoint("RIGHT", frame, "RIGHT", -20, 0)
     blurb:SetJustifyH("LEFT")
     blurb:SetWordWrap(true)
-    blurb:SetText(
-        "Choose mounts below to get your character list started. "
-        .. "Click a mount to preview it. You can add or remove mounts later "
-        .. "from the journal or by opening the /cmount menu.")
+    blurb:SetText(S.onboarding.blurb)
 
     -- -----------------------------------------------------------------------
     -- Scroll frame
@@ -435,27 +434,27 @@ function CharacterMount.ShowOnboarding()
     emptyHint:SetFont(LuckyUI.BODY_FONT, 13)
     emptyHint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
     emptyHint:SetPoint("TOPLEFT", content, "TOPLEFT", 10, -20)
-    emptyHint:SetText("No suggested mounts found for your character.")
+    emptyHint:SetText(S.onboarding.noSuggestions)
     emptyHint:Hide()
     frame.emptyHint = emptyHint
 
     -- -----------------------------------------------------------------------
     -- Bottom bar
     -- -----------------------------------------------------------------------
-    local addBtn = LuckyUI.CreateButton(frame, "Add Selected", 120, 28, "primary")
+    local addBtn = LuckyUI.CreateButton(frame, S.onboarding.addSelected, 120, 28, "primary")
     addBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 10)
     addBtn:SetScript("OnClick", function()
         CharacterMount.ApplyOnboarding()
     end)
 
-    local skipBtn = LuckyUI.CreateButton(frame, "Skip", 60, 22, "secondary")
+    local skipBtn = LuckyUI.CreateButton(frame, S.onboarding.skip, 60, 22, "secondary")
     skipBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 13)
     skipBtn:SetScript("OnClick", function()
         CharacterMount.SkipOnboarding()
     end)
 
     -- Select All / Deselect All
-    local selectAllBtn = LuckyUI.CreateButton(frame, "Select All", 75, 22, "secondary")
+    local selectAllBtn = LuckyUI.CreateButton(frame, S.onboarding.selectAll, 75, 22, "secondary")
     selectAllBtn:SetPoint("BOTTOM", frame, "BOTTOM", 0, 13)
     selectAllBtn:SetScript("OnClick", function()
         CharacterMount.ToggleAllOnboarding(true)
@@ -688,7 +687,7 @@ function CharacterMount.ApplyOnboarding()
     CharacterMount.db.onboardingComplete = true
     onboardingFrame:Hide()
 
-    print(PREFIX .. " Added " .. count .. " mounts to your list.")
+    print(PREFIX .. " " .. S.onboarding.added:format(count))
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     -- Pre-roll the macro so the first click is ready.
     CharacterMount.PreRoll()
@@ -701,7 +700,7 @@ end
 function CharacterMount.SkipOnboarding()
     CharacterMount.db.onboardingComplete = true
     onboardingFrame:Hide()
-    print(PREFIX .. " Onboarding skipped. Use /cmount add <name> to add mounts later.")
+    print(PREFIX .. " " .. S.onboarding.skipped)
 end
 
 -- ---------------------------------------------------------------------------
@@ -717,11 +716,11 @@ local function DoResetOnboarding()
     CharacterMount.db.preservedSettings = {}
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.ShowOnboarding()
-    print(PREFIX .. " Onboarding reset.")
+    print(PREFIX .. " " .. S.onboarding.reset)
 end
 
 StaticPopupDialogs["CHARACTERMOUNT_RESET_SETUP"] = {
-    text = "Running Setup again will clear your current mount list and any spec choices.\n\nContinue?",
+    text = S.onboarding.resetConfirm,
     button1 = YES,
     button2 = NO,
     OnAccept = DoResetOnboarding,

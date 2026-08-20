@@ -4,6 +4,8 @@
 
 CharacterMount = CharacterMount or {}
 
+local S = CharacterMount.Strings
+
 local R = LuckySettings.Rich.Theme
 local R_FONT = LuckySettings.Rich.Font
 
@@ -12,7 +14,7 @@ local ROW_GAP    = 2
 local INITIAL_POOL = 20
 
 local function HolidayNote(titles)
-    return "Covers: " .. table.concat(titles, ", ") .. "."
+    return S.settings.holidayNote:format(table.concat(titles, ", "))
 end
 
 -- ---------------------------------------------------------------------------
@@ -77,18 +79,18 @@ function CharacterMount.InitSettings()
     local db = CharacterMount.db
     if not db then return end
 
-    local panel = LuckySettings:NewRichPanel("Lucky's Character Mount", {
+    local panel = LuckySettings:NewRichPanel(S.addon.title, {
         addonFolder   = "Luckys_Character_Mount",
         minVersion    = CharacterMount.WHATS_NEW_MIN_VERSION,
         devMode       = {
-            label    = "Debug mode",
-            desc     = "Print detailed mount selection diagnostics to chat.",
+            label    = S.settings.debugMode,
+            desc     = S.settings.debugModeDesc,
             checked  = function() return CharacterMountDB.debugMode end,
             onToggle = function(checked) CharacterMountDB.debugMode = checked end,
         },
         minimapButton = {
-            label    = "Minimap button",
-            desc     = "Show the Character Mount button on the minimap.",
+            label    = S.settings.minimapButton,
+            desc     = S.settings.minimapButtonDesc,
             checked  = function() return not (CharacterMountDB.minimap or {}).hide end,
             onToggle = function(checked)
                 if CharacterMount.minimapButton then
@@ -101,14 +103,14 @@ function CharacterMount.InitSettings()
 
     -- Debug mode and the minimap button live in the title bar now, so this
     -- group exists to host the What's New list.
-    panel:Group("What's New")
+    panel:Group(S.settings.whatsNew)
 
-    local preferences = panel:Group("Preferences")
+    local preferences = panel:Group(S.settings.preferences)
 
-    preferences:Section("New mounts")
+    preferences:Section(S.settings.newMountsSection)
     preferences:Toggle({
-        label    = "Prompt on New Mount",
-        desc     = "Show a dialog asking to add a newly unlocked mount to your character list.",
+        label    = S.settings.promptNewMount,
+        desc     = S.settings.promptNewMountDesc,
         checked  = CharacterMountDB.autoPromptNewMount ~= false,
         onToggle = function(checked)
             CharacterMountDB.autoPromptNewMount = checked
@@ -116,19 +118,19 @@ function CharacterMount.InitSettings()
     })
 
     preferences:Toggle({
-        label    = "Show 3D mount preview",
-        desc     = "Display a live 3D model of the mount next to the new-mount prompt.",
-        parent   = "Prompt on New Mount",
+        label    = S.settings.showPreview,
+        desc     = S.settings.showPreviewDesc,
+        parent   = S.settings.promptNewMount,
         checked  = CharacterMountDB.showMountPreview ~= false,
         onToggle = function(checked)
             CharacterMountDB.showMountPreview = checked
         end,
     })
 
-    preferences:Section("Holidays")
+    preferences:Section(S.settings.holidaysSection)
     preferences:Toggle({
-        label    = "Assign mounts to holidays",
-        desc     = "Adds an \"Only during a holiday\" submenu to each mount's options, so you can limit any mount to a chosen in-game holiday.",
+        label    = S.settings.holidayAssign,
+        desc     = S.settings.holidayAssignDesc,
         note     = HolidayNote(CharacterMount.MountData.HOLIDAYS),
         checked  = CharacterMountDB.holidayAssignEnabled or false,
         onToggle = function(checked)
@@ -137,10 +139,10 @@ function CharacterMount.InitSettings()
     })
 
     preferences:Toggle({
-        label    = "Include micro-holidays",
-        desc     = "Adds the short events to that submenu too, such as Un'Goro Madness, Trial of Style, and the bonus event weeks.",
+        label    = S.settings.microHolidays,
+        desc     = S.settings.microHolidaysDesc,
         note     = HolidayNote(CharacterMount.MountData.MICRO_HOLIDAYS),
-        parent   = "Assign mounts to holidays",
+        parent   = S.settings.holidayAssign,
         since    = "1.9.0",
         checked  = CharacterMountDB.microHolidaysEnabled or false,
         onToggle = function(checked)
@@ -149,9 +151,9 @@ function CharacterMount.InitSettings()
     })
 
     preferences:Slider({
-        label    = "Holiday mount chance",
-        desc     = "While a holiday is running, this is the chance each roll picks one of that holiday's mounts. The rest of the time a normal mount is chosen.",
-        parent   = "Assign mounts to holidays",
+        label    = S.settings.holidayChance,
+        desc     = S.settings.holidayChanceDesc,
+        parent   = S.settings.holidayAssign,
         since    = "1.9.0",
         min      = 10,
         max      = 100,
@@ -163,13 +165,13 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    local macros = panel:Group("Macros")
+    local macros = panel:Group(S.settings.macros)
 
-    macros:Section("Default Macro")
+    macros:Section(S.settings.defaultMacro)
     macros:Button({
-        label   = "Get Default Macro",
-        desc    = "Puts the standard mount macro on your cursor. Drop it on an action bar to summon a random mount suited to where you are.",
-        tooltip = "Creates the default macro that rolls a mount for your current location, then places it on your cursor ready to drop onto a bar.",
+        label   = S.settings.getDefaultMacro,
+        desc    = S.settings.getDefaultMacroDesc,
+        tooltip = S.settings.getDefaultMacroTip,
         since   = "1.9.0",
         width   = 160,
         onClick = function()
@@ -178,11 +180,11 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    macros:Section("Ground Macro")
+    macros:Section(S.settings.groundMacro)
     macros:Button({
-        label   = "Get Ground Macro",
-        desc    = "Puts a ground-only mount macro on your cursor. Drop it on an action bar to summon a random ground mount, even in flying zones.",
-        tooltip = "Creates a macro that always rolls a ground mount, then places it on your cursor ready to drop onto a bar.",
+        label   = S.settings.getGroundMacro,
+        desc    = S.settings.getGroundMacroDesc,
+        tooltip = S.settings.getGroundMacroTip,
         width   = 160,
         onClick = function()
             CharacterMount.CreateGroundMacro()
@@ -190,10 +192,10 @@ function CharacterMount.InitSettings()
         end,
     })
 
-    macros:Section("Macro behaviour")
+    macros:Section(S.settings.macroBehaviour)
     macros:Toggle({
-        label    = "Allow dismount while flying",
-        desc     = "When enabled, pressing the mount macro mid-air will dismount you.",
+        label    = S.settings.allowDismount,
+        desc     = S.settings.allowDismountDesc,
         checked  = CharacterMountDB.allowFlyingDismount or false,
         onToggle = function(checked)
             CharacterMountDB.allowFlyingDismount = checked
@@ -202,20 +204,20 @@ function CharacterMount.InitSettings()
     })
 
     macros:Toggle({
-        label    = "Silence mount warnings",
-        desc     = "Stop chat messages when you cannot mount, such as in combat or indoors.",
+        label    = S.settings.quietWarnings,
+        desc     = S.settings.quietWarningsDesc,
         checked  = CharacterMountDB.quietMountWarnings or false,
         onToggle = function(checked)
             CharacterMountDB.quietMountWarnings = checked
         end,
     })
 
-    local mountListGroup = panel:Group("Mount List", {
+    local mountListGroup = panel:Group(S.settings.mountListGroup, {
         showAbout = false,
     })
     mountListGroup:Button({
-        label   = "Open Mount Journal",
-        desc    = "Open the Mount Journal to add or remove mounts from your character list.",
+        label   = S.settings.openJournal,
+        desc    = S.settings.openJournalDesc,
         width   = 140,
         onClick = function()
             HideUIPanel(SettingsPanel)
@@ -254,7 +256,7 @@ function CharacterMount.InitSettings()
         local mountList = CharacterMount.GetEffectiveMountList()
         table.sort(mountList, function(a, b) return (a.name or "") < (b.name or "") end)
 
-        mountCount:SetText(#mountList .. " mounts in your character list")
+        mountCount:SetText(S.mountList.countLabel:format(#mountList))
 
         -- Grow pool if the list exceeds current capacity
         while #rowPool < #mountList do
@@ -311,13 +313,13 @@ function CharacterMount.InitSettings()
     end
 
     panel:OnOpen(function()
-        macros.byLabel["Silence mount warnings"].checkbox:SetChecked(CharacterMountDB.quietMountWarnings or false)
-        macros.byLabel["Allow dismount while flying"].checkbox:SetChecked(CharacterMountDB.allowFlyingDismount or false)
-        preferences.byLabel["Prompt on New Mount"].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
-        preferences.byLabel["Show 3D mount preview"].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
-        preferences.byLabel["Assign mounts to holidays"].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
-        preferences.byLabel["Include micro-holidays"].checkbox:SetChecked(CharacterMountDB.microHolidaysEnabled or false)
-        preferences.byLabel["Holiday mount chance"].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
+        macros.byLabel[S.settings.quietWarnings].checkbox:SetChecked(CharacterMountDB.quietMountWarnings or false)
+        macros.byLabel[S.settings.allowDismount].checkbox:SetChecked(CharacterMountDB.allowFlyingDismount or false)
+        preferences.byLabel[S.settings.promptNewMount].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
+        preferences.byLabel[S.settings.showPreview].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
+        preferences.byLabel[S.settings.holidayAssign].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
+        preferences.byLabel[S.settings.microHolidays].checkbox:SetChecked(CharacterMountDB.microHolidaysEnabled or false)
+        preferences.byLabel[S.settings.holidayChance].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
         RefreshMountList()
     end)
 

@@ -4,6 +4,8 @@
 
 CharacterMount = CharacterMount or {}
 
+local S = CharacterMount.Strings
+
 local C = LuckyUI.C
 
 -- ---------------------------------------------------------------------------
@@ -122,9 +124,9 @@ local function UpdateJournalRowIndicator(button, elementData)
         end
         hitbox:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:AddLine("Character Mount")
-            GameTooltip:AddLine("This mount is in your character mount list.", 0.9, 0.85, 0.65, true)
-            GameTooltip:AddLine("Middle-click the mount to remove it.", 0.9, 0.85, 0.65, true)
+            GameTooltip:AddLine(S.journalButton.tooltipTitle)
+            GameTooltip:AddLine(S.journalButton.tooltipOnList, 0.9, 0.85, 0.65, true)
+            GameTooltip:AddLine(S.journalButton.tooltipRemove, 0.9, 0.85, 0.65, true)
             GameTooltip:Show()
         end)
         hitbox:SetScript("OnLeave", function()
@@ -209,16 +211,16 @@ function CharacterMount.HookMountJournalButton()
     local function UpdateButton()
         local mountID = GetSelectedMountID()
         if not mountID or mountID == 0 then
-            btn:SetText("No Mount Selected")
+            btn:SetText(S.journalButton.noneSelected)
             btn:Disable()
             return
         end
 
         btn:Enable()
         if IsOnCharList(mountID) then
-            btn:SetText("Remove from Char List")
+            btn:SetText(S.journalButton.removeFromList)
         else
-            btn:SetText("Add to Char List")
+            btn:SetText(S.journalButton.addToList)
         end
     end
 
@@ -293,7 +295,7 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     row:SetScript("OnEnter", function(self)
         if type(self.mountID) ~= "number" then return end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine("Click to preview this mount.", 0.9, 0.85, 0.65, true)
+        GameTooltip:AddLine(S.mountList.clickToPreview, 0.9, 0.85, 0.65, true)
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -370,7 +372,7 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
         end)
         row.closeBtn:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:AddLine("Remove from this list", 0.9, 0.85, 0.65, true)
+            GameTooltip:AddLine(S.mountList.removeFromList, 0.9, 0.85, 0.65, true)
             GameTooltip:Show()
         end)
         row.closeBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -395,7 +397,7 @@ function CharacterMount.CreateUI()
     tinsert(UISpecialFrames, "CharacterMount_ListFrame")
 
     -- Header bar (gradient background, gold title, close button)
-    LuckyUI.CreateHeader(frame, "Character Mounts")
+    LuckyUI.CreateHeader(frame, S.mountList.title)
 
     -- Count label (right side of header)
     frame.countLabel = frame:CreateFontString(nil, "OVERLAY")
@@ -410,7 +412,7 @@ function CharacterMount.CreateUI()
     frame.searchQuery = ""
     local search = LuckyUI.CreateSearchBox(frame, {
         height      = 22,
-        placeholder = "Search mounts...",
+        placeholder = S.mountList.searchPlaceholder,
         onChange    = function(query)
             frame.searchQuery = query
             CharacterMount.RefreshUI()
@@ -432,22 +434,22 @@ function CharacterMount.CreateUI()
     -- -----------------------------------------------------------------------
     -- Bottom bar buttons
     -- -----------------------------------------------------------------------
-    local mountBtn = LuckyUI.CreateButton(frame, "Mount Now", 95, 28, "primary")
+    local mountBtn = LuckyUI.CreateButton(frame, S.mountList.mountNow, 95, 28, "primary")
     mountBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 8)
     mountBtn:SetScript("OnClick", function() CharacterMount.MountRandom() end)
 
-    local macroBtn = LuckyUI.CreateButton(frame, "Create Macro", 100, 28, "secondary")
+    local macroBtn = LuckyUI.CreateButton(frame, S.mountList.createMacro, 100, 28, "secondary")
     macroBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 8)
     macroBtn:SetScript("OnClick", function() CharacterMount.CreateMacro() end)
 
-    local setupBtn = LuckyUI.CreateButton(frame, "Setup", 55, 28, "secondary")
+    local setupBtn = LuckyUI.CreateButton(frame, S.mountList.setup, 55, 28, "secondary")
     setupBtn:SetPoint("LEFT", macroBtn, "RIGHT", 6, 0)
     setupBtn:SetScript("OnClick", function()
         frame:Hide()
         CharacterMount.ResetOnboarding()
     end)
 
-    local journalOpenBtn = LuckyUI.CreateButton(frame, "Journal", 55, 28, "secondary")
+    local journalOpenBtn = LuckyUI.CreateButton(frame, S.mountList.journal, 55, 28, "secondary")
     journalOpenBtn:SetPoint("RIGHT", mountBtn, "LEFT", -6, 0)
     journalOpenBtn:SetScript("OnClick", function()
         ToggleCollectionsJournal(1)  -- 1 = Mount Journal tab
@@ -487,12 +489,12 @@ function CharacterMount.CreateUI()
     emptyHint:SetJustifyH("LEFT")
     emptyHint:SetWordWrap(true)
     emptyHint:SetWidth(250)
-    emptyHint:SetText("No mounts yet.\nUse /cmount add <name> or add mounts from the mount journal.")
+    emptyHint:SetText(S.mountList.noMounts)
     emptyHint:Hide()
     frame.emptyHint = emptyHint
 
     -- Open Mount Journal button (shown alongside empty hint)
-    local journalBtn = LuckyUI.CreateButton(content, "Open Mount Journal", 140, 24, "secondary")
+    local journalBtn = LuckyUI.CreateButton(content, S.mountList.openJournal, 140, 24, "secondary")
     journalBtn:SetPoint("TOPLEFT", emptyHint, "BOTTOMLEFT", 0, -10)
     journalBtn:SetScript("OnClick", function()
         ToggleCollectionsJournal(1)  -- 1 = Mount Journal tab
@@ -598,9 +600,9 @@ function CharacterMount.RefreshUI()
     frame.emptyHint:SetShown(isEmpty)
     if isEmpty then
         if query ~= "" then
-            frame.emptyHint:SetText("No mounts match \"" .. frame.searchQuery .. "\".")
+            frame.emptyHint:SetText(S.mountList.noMatches:format(frame.searchQuery))
         else
-            frame.emptyHint:SetText("No mounts yet.\nUse /cmount add <name> or add mounts from the mount journal.")
+            frame.emptyHint:SetText(S.mountList.noMounts)
         end
     end
     frame.journalBtn:SetShown(isEmpty and query == "")
@@ -651,7 +653,7 @@ function CharacterMount.RefreshUI()
                 row.icon:SetDesaturated(true)
                 row.nameLabel:SetText(item.name)
                 row.nameLabel:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-                row.actionBtn:SetText("Restore")
+                row.actionBtn:SetText(S.mountList.restore)
                 row.mountID    = item.id
                 row.isExcluded = true
                 row:Show()
@@ -727,7 +729,7 @@ function CharacterMount.ShowMountPreview(mountID, anchorFrame)
         frame = LuckyUI.CreatePanel("CharacterMount_MountPreview", UIParent, 260, 320)
         frame:Hide()
         tinsert(UISpecialFrames, "CharacterMount_MountPreview")
-        LuckyUI.CreateHeader(frame, "Preview")
+        LuckyUI.CreateHeader(frame, S.mountList.preview)
 
         frame:SetMovable(false)
         frame:RegisterForDrag()
@@ -826,7 +828,7 @@ function CharacterMount.ShowNewMountDialog(mountID)
         local frame = LuckyUI.CreatePanel("CharacterMount_NewMountDialog", UIParent, 340, 180)
         frame:SetPoint("CENTER", 0, 150)
         frame:SetFrameStrata("DIALOG")
-        LuckyUI.CreateHeader(frame, "New Mount Unlocked!")
+        LuckyUI.CreateHeader(frame, S.newMount.title)
         
         local iconTex = frame:CreateTexture(nil, "ARTWORK")
         iconTex:SetSize(40, 40)
@@ -847,23 +849,23 @@ function CharacterMount.ShowNewMountDialog(mountID)
         subLabel:SetPoint("RIGHT", frame, "RIGHT", -16, 0)
         subLabel:SetJustifyH("LEFT")
         subLabel:SetTextColor(LuckyUI.C.textMuted[1], LuckyUI.C.textMuted[2], LuckyUI.C.textMuted[3])
-        subLabel:SetText("Would you like to add it to your mount list?")
+        subLabel:SetText(S.newMount.question)
         
         local hintLabel = frame:CreateFontString(nil, "OVERLAY")
         hintLabel:SetFont(LuckyUI.BODY_FONT, 10)
         hintLabel:SetPoint("BOTTOM", frame, "BOTTOM", 0, 16)
         hintLabel:SetTextColor(0.5, 0.5, 0.5)
-        hintLabel:SetText("(This prompt can be disabled in settings)")
+        hintLabel:SetText(S.newMount.disableHint)
         
-        local btnCurrent = LuckyUI.CreateButton(frame, "Current Char", 100, 26, "primary")
+        local btnCurrent = LuckyUI.CreateButton(frame, S.newMount.currentChar, 100, 26, "primary")
         btnCurrent:SetPoint("BOTTOM", frame, "BOTTOM", 0, 40)
         frame.btnCurrent = btnCurrent
         
-        local btnClose = LuckyUI.CreateButton(frame, "No Thanks", 90, 26, "secondary")
+        local btnClose = LuckyUI.CreateButton(frame, S.newMount.noThanks, 90, 26, "secondary")
         btnClose:SetPoint("RIGHT", btnCurrent, "LEFT", -8, 0)
         frame.btnClose = btnClose
         
-        local btnAll = LuckyUI.CreateButton(frame, "All Chars", 100, 26, "primary")
+        local btnAll = LuckyUI.CreateButton(frame, S.newMount.allChars, 100, 26, "primary")
         btnAll:SetPoint("LEFT", btnCurrent, "RIGHT", 8, 0)
         frame.btnAll = btnAll
 
@@ -882,7 +884,7 @@ function CharacterMount.ShowNewMountDialog(mountID)
         previewTitle:SetFont(LuckyUI.TITLE_FONT, 13)
         previewTitle:SetTextColor(LuckyUI.C.goldPrimary[1], LuckyUI.C.goldPrimary[2], LuckyUI.C.goldPrimary[3])
         previewTitle:SetPoint("TOP", preview, "TOP", 0, -8)
-        previewTitle:SetText("Preview")
+        previewTitle:SetText(S.mountList.preview)
 
         local model = CreateFrame("PlayerModel", nil, preview)
         model:SetPoint("TOPLEFT", preview, "TOPLEFT", 6, -28)
