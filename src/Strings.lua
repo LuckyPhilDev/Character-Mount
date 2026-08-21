@@ -87,6 +87,9 @@ CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
         noMounts          = "No mounts yet.\nUse /cmount add <name> or add mounts from the mount journal.",
         noMatches         = "No mounts match \"%s\".",
         countLabel        = "%d mounts in your character list",
+        excludedToggle    = "Excluded (%d)",
+        activeToggle      = "Your mounts (%d)",
+        toggleHint        = "Click to show",
     },
 
     journalButton = {

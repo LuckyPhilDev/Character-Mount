@@ -271,6 +271,36 @@ local INITIAL_ACTIVE_POOL = 20
 local ROW_HEIGHT       = 28
 local ROW_GAP          = 2
 
+-- List area insets from the panel edges, and the height the view toggle takes
+-- between the list and the footer.
+local LIST_TOP     = 66
+local LIST_BOTTOM  = 48
+local TOGGLE_SPACE = 20
+
+-- Which of the two lists the window is showing, filtered by the search box and
+-- sorted by name. Restoring the last exclusion drops the excluded view, so the
+-- toggle can never strand the window on an empty list.
+function CharacterMount.ResolveList(showExcluded, activeList, excludedList, query)
+    showExcluded = showExcluded and #excludedList > 0
+
+    local shown = {}
+    for _, entry in ipairs(showExcluded and excludedList or activeList) do
+        if query == "" or (entry.name and entry.name:lower():find(query, 1, true)) then
+            shown[#shown + 1] = entry
+        end
+    end
+    table.sort(shown, function(a, b) return a.name < b.name end)
+
+    return shown, showExcluded
+end
+
+-- Rows of both lists stack in the same scroll content, one view at a time.
+local function PlaceRow(row, content, index)
+    row:ClearAllPoints()
+    row:SetPoint("TOPLEFT", content, "TOPLEFT",
+                 0, -6 - (index - 1) * (ROW_HEIGHT + ROW_GAP))
+end
+
 -- ---------------------------------------------------------------------------
 -- Internal: create one reusable row frame
 -- hasSourceLabel: true for active rows, false for excluded rows
@@ -359,10 +389,8 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
         row.sourceLabel:SetJustifyV("MIDDLE")
     else
         -- Excluded rows: an X to drop the mount from the list without restoring it.
-        -- Offset -22 lines it up with the active rows, which sit inside the
-        -- scroll frame and so end 18px short of the excluded rows' right edge.
         row.closeBtn = LuckyUI.CreateButton(row, "\195\151", 24, 22, "secondary")
-        row.closeBtn:SetPoint("RIGHT", row, "RIGHT", -22, 0)
+        row.closeBtn:SetPoint("RIGHT", row, "RIGHT", -4, 0)
 
         row.actionBtn:ClearAllPoints()
         row.actionBtn:SetPoint("RIGHT", row.closeBtn, "LEFT", -4, 0)
@@ -379,6 +407,45 @@ local function CreateRow(parent, hasSourceLabel, rowWidth)
     end
 
     return row
+end
+
+-- ---------------------------------------------------------------------------
+-- Internal: the strip below the list that swaps the window between the active
+-- mounts and the excluded ones. Only one list is ever on screen, so neither can
+-- crowd the other out however long it grows.
+-- ---------------------------------------------------------------------------
+local function CreateListToggle(parent)
+    local toggle = CreateFrame("Button", nil, parent)
+    toggle:SetHeight(18)
+
+    local line = toggle:CreateTexture(nil, "ARTWORK")
+    line:SetHeight(1)
+    line:SetPoint("TOPLEFT")
+    line:SetPoint("TOPRIGHT")
+    line:SetColorTexture(C.borderDark[1], C.borderDark[2], C.borderDark[3])
+
+    local hl = toggle:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(C.highlight[1], C.highlight[2], C.highlight[3], C.highlight[4])
+
+    toggle.label = toggle:CreateFontString(nil, "OVERLAY")
+    toggle.label:SetFont(LuckyUI.BODY_FONT, 11)
+    toggle.label:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+    toggle.label:SetPoint("LEFT", 2, -2)
+
+    toggle.hint = toggle:CreateFontString(nil, "OVERLAY")
+    toggle.hint:SetFont(LuckyUI.BODY_FONT, 11)
+    toggle.hint:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+    toggle.hint:SetPoint("RIGHT", -2, -2)
+    toggle.hint:SetText(S.mountList.toggleHint)
+
+    toggle:SetScript("OnClick", function()
+        parent.showExcluded = not parent.showExcluded
+        parent.scrollFrame:SetVerticalScroll(0)
+        CharacterMount.RefreshUI()
+    end)
+
+    return toggle
 end
 
 -- ---------------------------------------------------------------------------
@@ -461,18 +528,11 @@ function CharacterMount.CreateUI()
     frame.excludedPool = {}
 
     -- -----------------------------------------------------------------------
-    -- Divider: thin line + "Excluded" label (positioned dynamically in RefreshUI)
-    -- -----------------------------------------------------------------------
-    local divider = LuckyUI.CreateDivider(frame, "Excluded")
-    divider:Hide()
-    frame.divider = divider
-
-    -- -----------------------------------------------------------------------
     -- Active scroll frame
     -- -----------------------------------------------------------------------
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -66)
-    scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
+    scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -LIST_TOP)
+    scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, LIST_BOTTOM)
     frame.scrollFrame = scrollFrame
 
     local content = CreateFrame("Frame", nil, scrollFrame)
@@ -508,6 +568,21 @@ function CharacterMount.CreateUI()
         frame.activePool[i] = CreateRow(content, true, 322)
     end
 
+    -- -----------------------------------------------------------------------
+    -- View toggle, pinned above the footer
+    -- -----------------------------------------------------------------------
+    local toggle = CreateListToggle(frame)
+    toggle:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, LIST_BOTTOM - 2)
+    toggle:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, LIST_BOTTOM - 2)
+    toggle:Hide()
+    frame.viewToggle = toggle
+
+    -- Reopening lands on the active list, whichever view was left showing.
+    frame:SetScript("OnShow", function(self)
+        self.showExcluded = false
+        CharacterMount.RefreshUI()
+    end)
+
     CharacterMount.frame = frame
 end
 
@@ -520,37 +595,39 @@ function CharacterMount.RefreshUI()
     local frame = CharacterMount.frame
     if not frame then return end
 
-    local content    = frame.content
-    local fullList   = CharacterMount.GetEffectiveMountList()
-    local query      = frame.searchQuery and frame.searchQuery:lower() or ""
+    local content  = frame.content
+    local fullList = CharacterMount.GetEffectiveMountList()
+    local query    = frame.searchQuery and frame.searchQuery:lower() or ""
 
-    -- Filter the active list by the search query (case-insensitive name match).
-    local activeList = fullList
-    if query ~= "" then
-        activeList = {}
-        for _, entry in ipairs(fullList) do
-            if entry.name and entry.name:lower():find(query, 1, true) then
-                activeList[#activeList + 1] = entry
-            end
+    local excludedList = {}
+    for mountID in pairs(CharacterMount.db.exclusions) do
+        local name, _, icon = C_MountJournal.GetMountInfoByID(mountID)
+        if name then
+            excludedList[#excludedList + 1] = { id = mountID, name = name, icon = icon }
         end
     end
 
-    table.sort(activeList, function(a, b) return a.name < b.name end)
+    local shown, showExcluded =
+        CharacterMount.ResolveList(frame.showExcluded, fullList, excludedList, query)
+    frame.showExcluded = showExcluded
+
+    -- Only the pool for the current view is filled; the other is hidden, so the
+    -- two lists never share the panel.
+    local activeShown   = not showExcluded and shown or {}
+    local excludedShown = showExcluded and shown or {}
 
     -- -----------------------------------------------------------------------
     -- 1. Active rows (pool grows dynamically if the list exceeds capacity)
     -- -----------------------------------------------------------------------
-    while #frame.activePool < #activeList do
-        frame.activePool[#frame.activePool + 1] = CreateRow(frame.content, true, 322)
+    while #frame.activePool < #activeShown do
+        frame.activePool[#frame.activePool + 1] = CreateRow(content, true, 322)
     end
 
     for i = 1, #frame.activePool do
         local row   = frame.activePool[i]
-        local entry = activeList[i]
+        local entry = activeShown[i]
         if entry then
-            row:ClearAllPoints()
-            row:SetPoint("TOPLEFT", content, "TOPLEFT",
-                         0, -6 - (i - 1) * (ROW_HEIGHT + ROW_GAP))
+            PlaceRow(row, content, i)
             row.mountID    = entry.id
             row.isExcluded = false
 
@@ -592,11 +669,38 @@ function CharacterMount.RefreshUI()
         end
     end
 
+    -- -----------------------------------------------------------------------
+    -- 2. Excluded rows
+    -- -----------------------------------------------------------------------
+    while #frame.excludedPool < #excludedShown do
+        frame.excludedPool[#frame.excludedPool + 1] = CreateRow(content, false, 322)
+    end
+
+    for i = 1, #frame.excludedPool do
+        local row  = frame.excludedPool[i]
+        local item = excludedShown[i]
+        if item then
+            PlaceRow(row, content, i)
+            row.icon:SetTexture(item.icon)
+            row.icon:SetDesaturated(true)
+            row.nameLabel:SetText(item.name)
+            row.nameLabel:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
+            row.actionBtn:SetText(S.mountList.restore)
+            row.mountID    = item.id
+            row.isExcluded = true
+            row:Show()
+        else
+            row:Hide()
+        end
+    end
+
     -- Resize scroll content to fit rows
-    content:SetHeight(math.max(200, #activeList * (ROW_HEIGHT + ROW_GAP) + 14))
+    content:SetHeight(math.max(200, #shown * (ROW_HEIGHT + ROW_GAP) + 14))
 
     -- Empty hint — distinguishes "no mounts at all" from "no search matches".
-    local isEmpty = #activeList == 0
+    -- The excluded view is never empty: restoring the last exclusion returns
+    -- the window to the active list.
+    local isEmpty = #shown == 0
     frame.emptyHint:SetShown(isEmpty)
     if isEmpty then
         if query ~= "" then
@@ -607,70 +711,28 @@ function CharacterMount.RefreshUI()
     end
     frame.journalBtn:SetShown(isEmpty and query == "")
 
-    -- -----------------------------------------------------------------------
-    -- 2. Excluded rows
-    -- -----------------------------------------------------------------------
-    local excludedList = {}
-    for mountID in pairs(CharacterMount.db.exclusions) do
-        local name, _, icon = C_MountJournal.GetMountInfoByID(mountID)
-        if name then
-            excludedList[#excludedList + 1] = { id = mountID, name = name, icon = icon }
-        end
-    end
-    table.sort(excludedList, function(a, b) return a.name < b.name end)
-
-    -- Update header count label (shows "X of Y" while a search filter is active)
+    -- Header count label. It reports the character list on either view, so the
+    -- "X of Y" filter count only applies while the active list is showing.
     local exclStr = #excludedList > 0 and (" • " .. #excludedList .. " excluded") or ""
-    local mountsStr = (query ~= "")
-        and (#activeList .. " of " .. #fullList .. " mounts")
+    local mountsStr = (query ~= "" and not showExcluded)
+        and (#shown .. " of " .. #fullList .. " mounts")
         or  (#fullList .. " mounts")
     frame.countLabel:SetText(mountsStr .. exclStr)
 
-    -- Resize scroll frame: expand to fill the frame when no excluded section is shown.
-    local exclCount = #excludedList
-    local exclHeight = exclCount * (ROW_HEIGHT + ROW_GAP)
-    local scrollBottomY = exclCount > 0 and (48 + exclHeight + 22) or 48
+    -- -----------------------------------------------------------------------
+    -- 3. View toggle. With nothing excluded there is nowhere to switch to, so
+    --    the list takes the whole panel.
+    -- -----------------------------------------------------------------------
+    local hasExclusions = #excludedList > 0
+    frame.viewToggle:SetShown(hasExclusions)
+    frame.viewToggle.label:SetText(showExcluded
+        and S.mountList.activeToggle:format(#fullList)
+        or  S.mountList.excludedToggle:format(#excludedList))
+
     frame.scrollFrame:ClearAllPoints()
-    frame.scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -66)
-    frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, scrollBottomY)
-
-    -- Grow excluded pool if needed
-    while #frame.excludedPool < exclCount do
-        frame.excludedPool[#frame.excludedPool + 1] = CreateRow(frame, false, 330)
-    end
-
-    if exclCount > 0 then
-        for i = 1, #frame.excludedPool do
-            local row  = frame.excludedPool[i]
-            local item = excludedList[i]
-            if item then
-                local fromBottom = 48 + (exclCount - i) * (ROW_HEIGHT + ROW_GAP)
-                row:ClearAllPoints()
-                row:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, fromBottom)
-                row:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, fromBottom)
-                row:SetHeight(ROW_HEIGHT)
-                row.icon:SetTexture(item.icon)
-                row.icon:SetDesaturated(true)
-                row.nameLabel:SetText(item.name)
-                row.nameLabel:SetTextColor(C.textMuted[1], C.textMuted[2], C.textMuted[3])
-                row.actionBtn:SetText(S.mountList.restore)
-                row.mountID    = item.id
-                row.isExcluded = true
-                row:Show()
-            else
-                row:Hide()
-            end
-        end
-        frame.divider:ClearAllPoints()
-        frame.divider:SetPoint("BOTTOMLEFT",  frame, "BOTTOMLEFT",  10, 48 + exclHeight + 2)
-        frame.divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 48 + exclHeight + 2)
-        frame.divider:Show()
-    else
-        for i = 1, #frame.excludedPool do
-            frame.excludedPool[i]:Hide()
-        end
-        frame.divider:Hide()
-    end
+    frame.scrollFrame:SetPoint("TOPLEFT",     frame, "TOPLEFT",    10, -LIST_TOP)
+    frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30,
+                               hasExclusions and (LIST_BOTTOM + TOGGLE_SPACE) or LIST_BOTTOM)
 end
 
 -- ---------------------------------------------------------------------------
