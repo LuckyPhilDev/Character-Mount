@@ -1,3 +1,8 @@
+## [1.11.2] - 2026-08-21
+
+### Improved
+- **Excluded view** The mount list window shows one list at a time. Click the Excluded line above the buttons to switch to your excluded mounts, and click again to come back. (Thanks for the report BanditC64, and the suggestion Tuulani)
+
 ## [1.11.1] - 2026-08-20
 
 ### Improved
