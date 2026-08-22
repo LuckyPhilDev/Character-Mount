@@ -506,6 +506,48 @@ local function WeightedPick(pool)
     return normal[math.random(#normal)]
 end
 
+-- ---------------------------------------------------------------------------
+-- Roll memory (see CharacterMountRecency.lua)
+-- ---------------------------------------------------------------------------
+-- Session state only. GetTime() restarts with the client, so a saved timestamp
+-- would be meaningless, and forgetting a few rolls over a reload is invisible.
+local rollState = { recent = {} }
+
+local function VaryMounts()
+    return CharacterMountDB.varyMounts ~= false
+end
+
+local function StaySeconds()
+    return CharacterMountDB.stayOnMountSeconds or 0
+end
+
+--- The mount to stay on, or nil to roll. Shared by both roll sites so the
+--- macro's pre-roll picks the journal lane whenever the summon itself will.
+local function StickyPick(pool, category)
+    return CharacterMount.Recency.StickyPick(
+        pool, rollState, category, GetTime(), StaySeconds())
+end
+
+-- ponytail: spell forms (Travel Form, Soar, Running Wild) sit outside both
+-- rules, so only MountRandom records. PreRoll is the only place that can pick a
+-- form and it runs a click early, so recording there would log forms the player
+-- never cast, and filtering there would hand forms the share of every journal
+-- mount being held back. Track them properly if the pre-roll ever learns which
+-- macro was clicked.
+local function RecordRoll(entry, category)
+    CharacterMount.Recency.Record(
+        rollState, entry.id, category, GetTime(), EntryHolidayLive(entry))
+end
+
+--- Roll `pool`, skipping whatever came up recently when the player wants
+--- variety. Live holiday mounts are exempt so the holiday chance stays honest.
+local function RollFrom(pool)
+    if VaryMounts() then
+        pool = CharacterMount.Recency.Filter(pool, rollState, EntryHolidayLive)
+    end
+    return WeightedPick(pool)
+end
+
 --- Open the per-mount spec and type dropdown anchored to `anchor`.
 function CharacterMount.ShowSpecMenu(anchor, mountID)
     if not mountID or not MenuUtil or not MenuUtil.CreateContextMenu then return end
@@ -869,15 +911,22 @@ function CharacterMount.MountRandom(forcedCategory)
         devLog("Matching '" .. category .. "': " .. #preferred)
 
         local pool = #preferred > 0 and preferred or usable
-        local pick = WeightedPick(pool)
-        devLog("Picked from pool of " .. #pool .. ": " .. pick.name)
+        local pick = StickyPick(pool, category)
+        if pick then
+            devLog("Staying on: " .. pick.name)
+        else
+            pick = RollFrom(pool)
+            devLog("Picked from pool of " .. #pool .. ": " .. pick.name)
+        end
+        RecordRoll(pick, category)
         C_MountJournal.SummonByID(pick.id)
         return
     end
 
     if #usable > 0 then
-        local pick = WeightedPick(usable)
+        local pick = StickyPick(usable, category) or RollFrom(usable)
         devLog("Picked (no category filter): " .. pick.name)
+        RecordRoll(pick, category)
         C_MountJournal.SummonByID(pick.id)
         return
     end
@@ -1063,11 +1112,15 @@ function CharacterMount.PreRoll()
     for _, spec in ipairs(MACRO_SPECS) do
         local idx = GetMacroIndexByName(spec.name)
         if idx and idx > 0 then
-            local pool = BuildRollPool(spec.category or eligible)
+            local category = spec.category or eligible
+            local pool = BuildRollPool(category)
             if #pool == 0 then
                 devLog("[ROLL] " .. spec.name .. ": no usable mounts for next click.")
             else
-                local pick = WeightedPick(pool)
+                -- Sticky only. The journal mount PreRoll lands on is thrown
+                -- away, MountRandom rolls it live, so filtering here would
+                -- only skew the choice between a mount and a spell form.
+                local pick = StickyPick(pool, category) or WeightedPick(pool)
                 local body
                 if pick.spellID then
                     devLog("[ROLL] " .. spec.name .. " next click → spell: " .. pick.name)
