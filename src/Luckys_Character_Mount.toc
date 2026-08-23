@@ -12,6 +12,7 @@ Strings.lua
 CharacterMountHelpers.lua
 MountData.lua
 CharacterMountHolidays.lua
+CharacterMountRecency.lua
 CharacterMount.lua
 CharacterMountUI.lua
 CharacterMountSettings.lua

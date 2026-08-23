@@ -127,6 +127,31 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    preferences:Section(S.settings.rollingSection)
+    preferences:Toggle({
+        label    = S.settings.varyMounts,
+        desc     = S.settings.varyMountsDesc,
+        since    = "1.12.0",
+        checked  = CharacterMountDB.varyMounts ~= false,
+        onToggle = function(checked)
+            CharacterMountDB.varyMounts = checked
+        end,
+    })
+
+    preferences:Slider({
+        label    = S.settings.stayOnMount,
+        desc     = S.settings.stayOnMountDesc,
+        since    = "1.12.0",
+        min      = 0,
+        max      = 30,
+        step     = 1,
+        suffix   = "s",
+        value    = CharacterMountDB.stayOnMountSeconds or 0,
+        onChanged = function(val)
+            CharacterMountDB.stayOnMountSeconds = val
+        end,
+    })
+
     preferences:Section(S.settings.holidaysSection)
     preferences:Toggle({
         label    = S.settings.holidayAssign,
@@ -317,6 +342,8 @@ function CharacterMount.InitSettings()
         macros.byLabel[S.settings.allowDismount].checkbox:SetChecked(CharacterMountDB.allowFlyingDismount or false)
         preferences.byLabel[S.settings.promptNewMount].checkbox:SetChecked(CharacterMountDB.autoPromptNewMount ~= false)
         preferences.byLabel[S.settings.showPreview].checkbox:SetChecked(CharacterMountDB.showMountPreview ~= false)
+        preferences.byLabel[S.settings.varyMounts].checkbox:SetChecked(CharacterMountDB.varyMounts ~= false)
+        preferences.byLabel[S.settings.stayOnMount].slider:SetValue(CharacterMountDB.stayOnMountSeconds or 0)
         preferences.byLabel[S.settings.holidayAssign].checkbox:SetChecked(CharacterMountDB.holidayAssignEnabled or false)
         preferences.byLabel[S.settings.microHolidays].checkbox:SetChecked(CharacterMountDB.microHolidaysEnabled or false)
         preferences.byLabel[S.settings.holidayChance].slider:SetValue(CharacterMountDB.holidayWeightPercent or 50)
