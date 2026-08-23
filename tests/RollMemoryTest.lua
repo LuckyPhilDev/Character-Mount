@@ -109,6 +109,16 @@ local function rollAt(t)
     return roll()
 end
 
+--- Get off the mount at `t`, the way the game reports it.
+local function dismountAt(t)
+    now = t
+    for _, frame in ipairs(frames) do
+        if frame.scripts.OnEvent then
+            frame.scripts.OnEvent(frame, "PLAYER_MOUNT_DISPLAY_CHANGED")
+        end
+    end
+end
+
 -- ---------------------------------------------------------------------------
 -- Vary your mounts, on by default
 -- ---------------------------------------------------------------------------
@@ -157,22 +167,35 @@ CharacterMountDB.stayOnMountSeconds = 0
 
 -- Off at zero: the roll runs and variety pushes it to a different mount.
 local first = rollAt(2000)
-assert(rollAt(2001) ~= first)
+dismountAt(2001)
+assert(rollAt(2002) ~= first)
 
 CharacterMountDB.stayOnMountSeconds = 10
 
--- Straight back on inside the window is the same mount, however many times.
+-- Tuulani's rule: off again inside the window and the next summon is the same
+-- mount, however long you waited before summoning, however many times.
 first = rollAt(3000)
-assert(rollAt(3002) == first)
-assert(rollAt(3004) == first)
+dismountAt(3002)
+assert(rollAt(3050) == first)
+dismountAt(3053)
+assert(rollAt(3500) == first)
 
--- Past the window it rolls again, and variety keeps it off the one just held.
-assert(rollAt(3100) ~= first)
+-- A ride as long as the window rolls again, even straight after, and variety
+-- keeps it off the one just ridden.
+dismountAt(3510)
+assert(rollAt(3511) ~= first)
+
+-- A summon that never went off has no dismount to measure from, so a quick
+-- second press gets the same mount and a late one rolls.
+first = rollAt(3600)
+assert(rollAt(3602) == first)
+assert(rollAt(3700) ~= first)
 
 -- A category change defeats it: the ground mount is not summoned underwater.
 -- Every mount in this journal is ground-only, so a water roll has no match and
 -- falls back to the full list, which is where a stuck sticky would show up.
 first = rollAt(4000)
+dismountAt(4000.5)
 category = CharacterMount_MOUNT_TYPE.WATER
 local held = 0
 for i = 1, 20 do

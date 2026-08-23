@@ -2,7 +2,7 @@
 
 ### Added
 - **Vary your mounts** Skips the last few mounts you summoned, so a short list stops coming up with the same one twice in a row. On by default in Preferences.
-- **Stay on the same mount** Re-mounting soon after your last summon gives you that mount back rather than a fresh roll, for as many seconds as you set in Preferences. Going into water or the air rolls anyway. (Thanks for the suggestion Tuulani)
+- **Stay on the same mount** Get off a mount sooner than the number of seconds you set in Preferences and your next summon gives you that mount back rather than a fresh roll. Going into water or the air rolls anyway. (Thanks for the suggestion Tuulani)
 
 ## [1.11.2] - 2026-08-21
 

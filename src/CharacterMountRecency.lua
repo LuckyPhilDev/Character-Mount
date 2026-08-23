@@ -2,8 +2,8 @@
 --
 -- Two rules share one piece of state, the last summon:
 --
---   Stay on the same mount   Re-summoning moments after the last summon gives
---                            you that mount back instead of a fresh roll.
+--   Stay on the same mount   A mount you got off after only moments comes back
+--                            on the next summon instead of a fresh roll.
 --   Vary your mounts         Anything summoned recently is skipped, so a short
 --                            list stops repeating itself.
 --
@@ -45,18 +45,28 @@ function Recency.Record(state, key, category, now, skipHistory)
     state.recent = recent
 end
 
+--- Note the dismount that ends the last summon's ride. Only the first one
+--- counts: a later dismount belongs to something else (a spell form, a mount
+--- summoned outside the addon) and must not overwrite how long the ride was.
+function Recency.RecordDismount(state, now)
+    local last = state.last
+    if last and not last.ride then last.ride = now - last.time end
+end
+
 --- The entry to stay on, or nil to roll instead. A category change defeats it,
 --- so a quick hop out of the water still gets you something that flies, and so
 --- does a mount that has left the pool since.
 ---
---- Elapsed time is measured from the last summon rather than from the dismount:
---- if you are summoning again, you were on it at most that long. Leaving a
---- mount any other way (jumping off, a taxi, zoning) is not visible to us.
+--- What is measured is how long you were on the mount, summon to dismount, so
+--- a short hop comes back however long ago you got off. Until the dismount has
+--- been seen (still on it, or the summon never went off) the ride is counted
+--- up to now, which is what the macro's pre-roll sees on the dismount click.
 function Recency.StickyPick(pool, state, category, now, windowSeconds)
     local last = state.last
     if not windowSeconds or windowSeconds <= 0 then return nil end
     if not last or last.category ~= category then return nil end
-    if now - last.time >= windowSeconds then return nil end
+    local ride = last.ride or (now - last.time)
+    if ride >= windowSeconds then return nil end
 
     for i = 1, #pool do
         if Recency.Key(pool[i]) == last.key then return pool[i] end

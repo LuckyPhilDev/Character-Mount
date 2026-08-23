@@ -1546,6 +1546,7 @@ eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:RegisterEvent("NEW_MOUNT_ADDED")
 eventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+eventFrame:RegisterEvent("PLAYER_MOUNT_DISPLAY_CHANGED")
 local addonLoaded_self        = false
 local addonLoaded_collections = false
 local playerLoggedIn          = false
@@ -1616,5 +1617,10 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         -- Re-roll the macro and refresh the list so per-spec choices take effect.
         CharacterMount.UpdateMacro()
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
+    elseif event == "PLAYER_MOUNT_DISPLAY_CHANGED" then
+        -- Fires for every way off a mount: the macro, jumping off, a taxi, zoning.
+        if not IsMounted() then
+            CharacterMount.Recency.RecordDismount(rollState, GetTime())
+        end
     end
 end)

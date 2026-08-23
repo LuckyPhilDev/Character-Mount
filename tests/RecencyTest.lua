@@ -86,17 +86,38 @@ assert(state.last.key == 3)
 -- Stay on the same mount
 -- ---------------------------------------------------------------------------
 
+-- Tuulani's rule: on a mount for less than the window, and the next summon is
+-- that mount again, however long ago you got off it.
 state = newState()
 R.Record(state, 4, "ground", 100)
-
--- Back on within the window, so the same mount rather than a fresh roll.
+R.RecordDismount(state, 103)
 assert(R.StickyPick(SIX, state, "ground", 105, 10).id == 4)
+assert(R.StickyPick(SIX, state, "ground", 900, 10).id == 4)
 
--- Past the window, roll as normal.
+-- A ride as long as the window rolls as normal, even straight after.
+state = newState()
+R.Record(state, 4, "ground", 100)
+R.RecordDismount(state, 110)
+assert(R.StickyPick(SIX, state, "ground", 111, 10) == nil)
+
+-- Only the first dismount ends the ride. A later one (a spell form, a mount
+-- summoned outside the addon) does not stretch a short hop into a long one.
+state = newState()
+R.Record(state, 4, "ground", 100)
+R.RecordDismount(state, 103)
+R.RecordDismount(state, 500)
+assert(R.StickyPick(SIX, state, "ground", 501, 10).id == 4)
+
+-- No dismount seen yet, so the ride is counted up to now. This is what the
+-- macro's pre-roll sees on the dismount click, and what a summon that never
+-- went off leaves behind.
+state = newState()
+R.Record(state, 4, "ground", 100)
+assert(R.StickyPick(SIX, state, "ground", 105, 10).id == 4)
 assert(R.StickyPick(SIX, state, "ground", 110, 10) == nil)
-assert(R.StickyPick(SIX, state, "ground", 115, 10) == nil)
 
 -- Zero seconds turns the whole thing off.
+R.RecordDismount(state, 103)
 assert(R.StickyPick(SIX, state, "ground", 105, 0) == nil)
 assert(R.StickyPick(SIX, state, "ground", 105, nil) == nil)
 
@@ -106,6 +127,9 @@ assert(R.StickyPick(SIX, state, "water", 105, 10) == nil)
 -- A mount that has left the pool (excluded, off for this spec, holiday over)
 -- falls through to a roll instead of being summoned anyway.
 assert(R.StickyPick({ mount(1), mount(2) }, state, "ground", 105, 10) == nil)
+
+-- A dismount with nothing summoned is nothing to remember.
+R.RecordDismount(newState(), 100)
 
 -- Nothing summoned yet.
 assert(R.StickyPick(SIX, newState(), "ground", 105, 10) == nil)
