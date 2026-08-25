@@ -401,11 +401,24 @@ function CharacterMount.ShowOnboarding()
     blurb:SetWordWrap(true)
     blurb:SetText(S.onboarding.blurb)
 
+    -- One-click shortcut for players who already curate journal favourites.
+    local importBtn = LuckyUI.CreateButton(frame, S.onboarding.importFavourites, 130, 24, "secondary")
+    importBtn:SetPoint("TOPLEFT", blurb, "BOTTOMLEFT", 0, -8)
+    importBtn:SetScript("OnClick", function()
+        CharacterMount.ImportFavourites()
+    end)
+    importBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(S.onboarding.importFavouritesTip, 0.9, 0.85, 0.65, true)
+        GameTooltip:Show()
+    end)
+    importBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
     -- -----------------------------------------------------------------------
     -- Scroll frame
     -- -----------------------------------------------------------------------
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", blurb, "BOTTOMLEFT", -4, -6)
+    scrollFrame:SetPoint("TOPLEFT", importBtn, "BOTTOMLEFT", -4, -6)
     scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 48)
 
     local content = CreateFrame("Frame", nil, scrollFrame)
@@ -690,6 +703,35 @@ function CharacterMount.ApplyOnboarding()
     print(PREFIX .. " " .. S.onboarding.added:format(count))
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     -- Pre-roll the macro so the first click is ready.
+    CharacterMount.PreRoll()
+end
+
+-- ---------------------------------------------------------------------------
+-- Import journal favourites
+-- ---------------------------------------------------------------------------
+
+function CharacterMount.ImportFavourites()
+    local count = 0
+    for _, mountID in ipairs(C_MountJournal.GetMountIDs()) do
+        local name, _, _, _, isUsable, _, isFavorite, _, _, shouldHideOnChar, isCollected =
+            C_MountJournal.GetMountInfoByID(mountID)
+        if isFavorite and isCollected and isUsable and name and not shouldHideOnChar then
+            CharacterMount.db.exclusions[mountID] = nil
+            CharacterMount.db.additions[mountID]  = "favourite"
+            count = count + 1
+        end
+    end
+
+    if count == 0 then
+        print(PREFIX .. " " .. S.onboarding.noFavourites)
+        return
+    end
+
+    CharacterMount.db.onboardingComplete = true
+    if onboardingFrame then onboardingFrame:Hide() end
+
+    print(PREFIX .. " " .. S.onboarding.added:format(count))
+    if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
 end
 

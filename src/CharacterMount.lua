@@ -35,6 +35,7 @@ CharacterMount.SourceColor = {
     suggested_race  = LuckyUI.WC.info,
     rare            = LuckyUI.WC.purple,
     shop            = LuckyUI.WC.goldPrimary,
+    favourite       = LuckyUI.WC.goldAccent,
 }
 
 CharacterMount.SourceLabel = {
@@ -46,6 +47,7 @@ CharacterMount.SourceLabel = {
     suggested_race  = S.sources.racial,
     rare            = S.sources.rare,
     shop            = S.sources.shop,
+    favourite       = S.sources.favourite,
 }
 
 -- RGB values for pill/tag backgrounds (matched to SourceColor)
@@ -58,6 +60,7 @@ CharacterMount.SourcePillRGB = {
     suggested_race  = LuckyUI.C.info,
     rare            = LuckyUI.C.purple,
     shop            = LuckyUI.C.goldPrimary,
+    favourite       = LuckyUI.C.goldAccent,
 }
 
 -- Spell-based "mounts" (class/racial forms). Keyed by a synthetic ID

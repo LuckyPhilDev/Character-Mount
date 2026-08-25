@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Added
+- **Import Favourites** A button in Setup fills your character list with every favourite mount from your Mount Journal in one click, no picking through the wizard.
+
 ## [1.12.1] - 2026-08-25
 
 ### Improved
