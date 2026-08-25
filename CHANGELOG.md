@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Improved
+- **Stay on the same mount** The seconds slider in Preferences now reaches 120, four times as far as it did. (Thanks for the suggestion Tuulani)
+
 ## [1.12.0] - 2026-08-23
 
 ### Added
