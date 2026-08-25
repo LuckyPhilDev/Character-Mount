@@ -42,6 +42,7 @@ CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
         suggested = "Suggested",
         rare      = "Rare",
         shop      = "Shop",
+        favourite = "Favourite",
     },
 
     mountTypes = {
@@ -116,6 +117,9 @@ CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
         blurb          = "Choose mounts below to get your character list started. Click a mount to preview it. You can add or remove mounts later from the journal or by opening the /cmount menu.",
         noSuggestions  = "No suggested mounts found for your character.",
         addSelected    = "Add Selected",
+        importFavourites    = "Import Favourites",
+        importFavouritesTip = "Adds every favourite mount from your Mount Journal, then closes Setup.",
+        noFavourites   = "No favourite mounts in your Mount Journal.",
         skip           = "Skip",
         selectAll      = "Select All",
         deselectAll    = "Deselect All",
