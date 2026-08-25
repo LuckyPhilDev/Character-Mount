@@ -81,7 +81,6 @@ function CharacterMount.InitSettings()
 
     local panel = LuckySettings:NewRichPanel(S.addon.title, {
         addonFolder   = "Luckys_Character_Mount",
-        minVersion    = CharacterMount.WHATS_NEW_MIN_VERSION,
         devMode       = {
             label    = S.settings.debugMode,
             desc     = S.settings.debugModeDesc,
@@ -143,7 +142,7 @@ function CharacterMount.InitSettings()
         desc     = S.settings.stayOnMountDesc,
         since    = "1.12.0",
         min      = 0,
-        max      = 30,
+        max      = 120,
         step     = 1,
         suffix   = "s",
         value    = CharacterMountDB.stayOnMountSeconds or 0,
