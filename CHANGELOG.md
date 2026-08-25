@@ -1,7 +1,10 @@
-## [Unreleased]
+## [1.12.1] - 2026-08-25
 
 ### Improved
 - **Stay on the same mount** The seconds slider in Preferences now reaches 120, four times as far as it did. (Thanks for the suggestion Tuulani)
+
+### Fixed
+- Mount names in the mount list show on a Russian client, instead of empty boxes. (Thanks for the report Grelle)
 
 ## [1.12.0] - 2026-08-23
 
