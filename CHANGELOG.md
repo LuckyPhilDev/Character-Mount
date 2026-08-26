@@ -1,7 +1,10 @@
-## [Unreleased]
+## [1.12.2] - 2026-08-26
 
 ### Added
 - **Import Favourites** A button in Setup fills your character list with every favourite mount from your Mount Journal in one click, no picking through the wizard.
+
+### Fixed
+- Settings and windows open again where an older copy of Lucky's Utils is installed alongside the addon.
 
 ## [1.12.1] - 2026-08-25
 

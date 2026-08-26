@@ -40,6 +40,8 @@
 4. Type `/cmount macro` to create an action bar macro, then drag it to your bar.
 5. Click the macro to summon a random mount from your list.
 
+Setup also has an **Import Favourites** button, which fills your character list with every favourite from your Mount Journal in one click instead of picking through the wizard.
+
 You can re-run the onboarding at any time via the **Setup** button in the mount list, or `/cmount reset onboarding`. Both ask you to confirm first, since re-running Setup clears your current mount list.
 
 ---
