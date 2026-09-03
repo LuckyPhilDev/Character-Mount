@@ -79,7 +79,7 @@ local function BuildCandidates()
     -- Only include forms the character actually knows.
     local formEntries = {}
     for _, form in pairs(CharacterMount.FORM_SPELLS) do
-        if IsSpellKnown(form.spellID) then
+        if C_SpellBook.IsSpellInSpellBook(form.spellID) then
             local spellInfo = C_Spell.GetSpellInfo(form.spellID)
             if spellInfo then
                 -- For display purposes, "all" category forms appear under

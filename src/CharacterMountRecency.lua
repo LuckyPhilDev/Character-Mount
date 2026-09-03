@@ -2,8 +2,9 @@
 --
 -- Two rules share one piece of state, the last summon:
 --
---   Stay on the same mount   A mount you got off after only moments comes back
---                            on the next summon instead of a fresh roll.
+--   Remember rides shorter   A mount you got off after only moments comes back
+--   than                     on the next summon instead of a fresh roll, until
+--                            Total remember time runs out on it.
 --   Vary your mounts         Anything summoned recently is skipped, so a short
 --                            list stops repeating itself.
 --
@@ -28,10 +29,27 @@ end
 --- Note a summon. `key` leads the recent list unless `skipHistory` is set,
 --- which is how a live holiday mount stays out of the way of the holiday
 --- chance setting while still being the mount you can stay on.
+---
+--- `since` is when this mount first came up rather than when it was last
+--- summoned, so summoning it again does not restart the clock "Forget it
+--- after" runs against. Summoning anything else starts a fresh one.
+---
+-- ponytail: a fresh roll landing on the mount just ridden inherits its clock
+-- instead of starting one, because nothing here is told whether the pick was
+-- sticky or rolled. The cost is one summon that declines to stick, and "Vary
+-- your mounts" makes back-to-back identical rolls rare anyway. Pass the flag
+-- down from both roll sites if that ever matters.
 function Recency.Record(state, key, category, now, skipHistory)
     if key == nil then return end
 
-    state.last = { key = key, category = category, time = now }
+    local prev = state.last
+    local sameHold = prev and prev.key == key and prev.category == category
+    state.last = {
+        key      = key,
+        category = category,
+        time     = now,
+        since    = sameHold and prev.since or now,
+    }
     if skipHistory then return end
 
     local recent = state.recent or {}
@@ -61,12 +79,21 @@ end
 --- a short hop comes back however long ago you got off. Until the dismount has
 --- been seen (still on it, or the summon never went off) the ride is counted
 --- up to now, which is what the macro's pre-roll sees on the dismount click.
-function Recency.StickyPick(pool, state, category, now, windowSeconds)
+---
+--- `forgetSeconds` caps how long the whole run lasts. It counts from the mount
+--- first coming up, not from the last summon, so hopping off and re-summoning
+--- keeps the same mount only until the cap is reached, and a run of short hops
+--- cannot leave you on one mount all day.
+function Recency.StickyPick(pool, state, category, now, windowSeconds, forgetSeconds)
     local last = state.last
     if not windowSeconds or windowSeconds <= 0 then return nil end
     if not last or last.category ~= category then return nil end
     local ride = last.ride or (now - last.time)
     if ride >= windowSeconds then return nil end
+    if forgetSeconds and forgetSeconds > 0
+        and now - (last.since or last.time) >= forgetSeconds then
+        return nil
+    end
 
     for i = 1, #pool do
         if Recency.Key(pool[i]) == last.key then return pool[i] end
