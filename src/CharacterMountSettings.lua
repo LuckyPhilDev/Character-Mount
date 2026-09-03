@@ -151,6 +151,21 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    preferences:Slider({
+        label    = S.settings.stayForget,
+        desc     = S.settings.stayForgetDesc,
+        parent   = S.settings.stayOnMount,
+        since    = "1.13.0",
+        min      = 0,
+        max      = 30,
+        step     = 1,
+        suffix   = "m",
+        value    = function() return CharacterMountDB.stayForgetMinutes or 0 end,
+        onChanged = function(val)
+            CharacterMountDB.stayForgetMinutes = val
+        end,
+    })
+
     preferences:Section(S.settings.holidaysSection)
     preferences:Toggle({
         label    = S.settings.holidayAssign,

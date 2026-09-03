@@ -203,4 +203,31 @@ for i = 1, 20 do
 end
 assert(held < 20, "the ground mount was held on to after moving to water")
 
+-- ---------------------------------------------------------------------------
+-- Forget it after
+-- ---------------------------------------------------------------------------
+
+category = CharacterMount_MOUNT_TYPE.GROUND
+CharacterMountDB.varyMounts = false
+CharacterMountDB.stayForgetMinutes = 5
+
+-- Fishing: hop off, fish, re-summon, and the same mount keeps coming back for
+-- the five minutes. Variety is off, so only the cap can break the hold.
+first = rollAt(6000)
+for hop = 1, 4 do
+    dismountAt(6000 + hop * 60 - 57)
+    assert(rollAt(6000 + hop * 60) == first, "the hop chain dropped the mount early")
+end
+
+-- Past five minutes from the first summon it gives up, however short the hops.
+dismountAt(6243)
+held = 0
+for i = 1, 20 do
+    if rollAt(6301 + i * 4) == first then held = held + 1 end
+    dismountAt(6303 + i * 4)
+end
+assert(held < 20, "the mount kept coming back past the cap")
+
+CharacterMountDB.stayForgetMinutes = nil
+
 print("RollMemoryTest: OK")

@@ -128,6 +128,38 @@ assert(R.StickyPick(SIX, state, "water", 105, 10) == nil)
 -- falls through to a roll instead of being summoned anyway.
 assert(R.StickyPick({ mount(1), mount(2) }, state, "ground", 105, 10) == nil)
 
+-- ---------------------------------------------------------------------------
+-- Forget it after
+-- ---------------------------------------------------------------------------
+
+-- Tuulani's case: fish, re-summon, fish again. The mount keeps coming back
+-- until the cap, counted from when it first came up, then a roll takes over.
+state = newState()
+R.Record(state, 4, "ground", 100)
+for hop = 1, 4 do
+    local off = 100 + hop * 60
+    R.RecordDismount(state, off - 57)
+    assert(R.StickyPick(SIX, state, "ground", off, 10, 300).id == 4)
+    R.Record(state, 4, "ground", off)
+end
+R.RecordDismount(state, 343)
+assert(R.StickyPick(SIX, state, "ground", 399, 10, 300).id == 4)
+assert(R.StickyPick(SIX, state, "ground", 400, 10, 300) == nil)
+
+-- Re-summoning is what the cap has to survive: it must not restart the clock.
+assert(state.last.time == 340 and state.last.since == 100)
+
+-- The ride itself is still short, so only the cap ended it. Zero holds on.
+assert(R.StickyPick(SIX, state, "ground", 400, 10, 0).id == 4)
+assert(R.StickyPick(SIX, state, "ground", 400, 10, nil).id == 4)
+
+-- Summoning something else starts a fresh clock rather than inheriting one.
+state = newState()
+R.Record(state, 4, "ground", 100)
+R.Record(state, 5, "ground", 500)
+R.RecordDismount(state, 503)
+assert(R.StickyPick(SIX, state, "ground", 600, 10, 300).id == 5)
+
 -- A dismount with nothing summoned is nothing to remember.
 R.RecordDismount(newState(), 100)
 

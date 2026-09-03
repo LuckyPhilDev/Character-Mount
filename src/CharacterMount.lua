@@ -519,11 +519,15 @@ local function StaySeconds()
     return CharacterMountDB.stayOnMountSeconds or 0
 end
 
+local function StayForgetSeconds()
+    return (CharacterMountDB.stayForgetMinutes or 0) * 60
+end
+
 --- The mount to stay on, or nil to roll. Shared by both roll sites so the
 --- macro's pre-roll picks the journal lane whenever the summon itself will.
 local function StickyPick(pool, category)
     return CharacterMount.Recency.StickyPick(
-        pool, rollState, category, GetTime(), StaySeconds())
+        pool, rollState, category, GetTime(), StaySeconds(), StayForgetSeconds())
 end
 
 -- ponytail: spell forms (Travel Form, Soar, Running Wild) sit outside both
