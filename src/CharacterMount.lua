@@ -1029,7 +1029,7 @@ local function BuildRollPool(category)
         elseif not CharacterMount.IsMountAvailableNow(entry.id) then
             ok = false
         elseif entry.spellID then
-            ok = IsSpellKnown(entry.spellID)
+            ok = C_SpellBook.IsSpellInSpellBook(entry.spellID)
         else
             local _, _, _, _, isUsable = C_MountJournal.GetMountInfoByID(entry.id)
             ok = isUsable
