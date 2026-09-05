@@ -8,6 +8,10 @@
 --   Vary your mounts         Anything summoned recently is skipped, so a short
 --                            list stops repeating itself.
 --
+-- A summon reaches that state only once the player is on the mount: it is
+-- recorded in flight and committed when the mount comes up, so a cast walked
+-- out of leaves no trace and the next click rolls afresh.
+--
 -- Both are decided from data passed in, so nothing here calls a WoW API and
 -- tests/RecencyTest.lua can run the whole thing standalone.
 
@@ -20,15 +24,52 @@ local Recency = CharacterMount.Recency
 -- a six mount list from doubling up without the block being felt on a big one.
 Recency.HISTORY_SIZE = 3
 
+-- How long a summon is still expected to land. A mount cast is a second and a
+-- half; the rest is slack for a slow server.
+Recency.SUMMON_GRACE = 5
+
 --- Stable identity for a roll entry: a journal mount is its numeric ID, a
 --- spell form the "spell:<id>" key it is stored under.
 function Recency.Key(entry)
     return entry and entry.id
 end
 
---- Note a summon. `key` leads the recent list unless `skipHistory` is set,
---- which is how a live holiday mount stays out of the way of the holiday
---- chance setting while still being the mount you can stay on.
+local function PendingSummon(state, now)
+    local pending = state.pending
+    if pending and now - pending.time <= Recency.SUMMON_GRACE then return pending end
+    return nil
+end
+
+--- Note a summon the game has been asked for. Nothing is remembered until it
+--- lands, so a cast the player walks out of leaves the memory as it was.
+function Recency.RecordSummon(state, key, category, now, skipHistory)
+    state.pending = {
+        key         = key,
+        category    = category,
+        time        = now,
+        skipHistory = skipHistory,
+    }
+end
+
+--- True while a summon is still expected to land.
+function Recency.SummonInFlight(state, now)
+    return PendingSummon(state, now) ~= nil
+end
+
+--- The player is on a mount, so a summon in flight is the one that landed and
+--- becomes the last summon. One that has been in the air past the grace was
+--- not this mount-up, and is dropped rather than credited to it.
+function Recency.CommitSummon(state, now)
+    local pending = PendingSummon(state, now)
+    state.pending = nil
+    if not pending then return false end
+    Recency.Record(state, pending.key, pending.category, now, pending.skipHistory)
+    return true
+end
+
+--- Note a summon that landed. `key` leads the recent list unless `skipHistory`
+--- is set, which is how a live holiday mount stays out of the way of the
+--- holiday chance setting while still being the mount you can stay on.
 ---
 --- `since` is when this mount first came up rather than when it was last
 --- summoned, so summoning it again does not restart the clock "Forget it
@@ -75,10 +116,10 @@ end
 --- so a quick hop out of the water still gets you something that flies, and so
 --- does a mount that has left the pool since.
 ---
---- What is measured is how long you were on the mount, summon to dismount, so
---- a short hop comes back however long ago you got off. Until the dismount has
---- been seen (still on it, or the summon never went off) the ride is counted
---- up to now, which is what the macro's pre-roll sees on the dismount click.
+--- What is measured is how long you were on the mount, mounting to dismount,
+--- so a short hop comes back however long ago you got off. Until the dismount
+--- has been seen the player is still on it, so the ride is counted up to now,
+--- which is what the macro's pre-roll sees on the dismount click.
 ---
 --- `forgetSeconds` caps how long the whole run lasts. It counts from the mount
 --- first coming up, not from the last summon, so hopping off and re-summoning
