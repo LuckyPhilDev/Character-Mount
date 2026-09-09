@@ -108,9 +108,8 @@ R.RecordDismount(state, 103)
 R.RecordDismount(state, 500)
 assert(R.StickyPick(SIX, state, "ground", 501, 10).id == 4)
 
--- No dismount seen yet, so the ride is counted up to now. This is what the
--- macro's pre-roll sees on the dismount click, and what a summon that never
--- went off leaves behind.
+-- No dismount seen yet, so the player is still on it and the ride is counted
+-- up to now. This is what the macro's pre-roll sees on the dismount click.
 state = newState()
 R.Record(state, 4, "ground", 100)
 assert(R.StickyPick(SIX, state, "ground", 105, 10).id == 4)
@@ -127,6 +126,35 @@ assert(R.StickyPick(SIX, state, "water", 105, 10) == nil)
 -- A mount that has left the pool (excluded, off for this spec, holiday over)
 -- falls through to a roll instead of being summoned anyway.
 assert(R.StickyPick({ mount(1), mount(2) }, state, "ground", 105, 10) == nil)
+
+-- ---------------------------------------------------------------------------
+-- A summon has to land
+-- ---------------------------------------------------------------------------
+
+-- Tuulani's case: a cast the player walks out of is not a mount they rode, so
+-- neither rule can see it. Nothing comes back to it and nothing is held back.
+state = newState()
+R.RecordSummon(state, 4, "ground", 100)
+assert(R.SummonInFlight(state, 100))
+assert(R.StickyPick(SIX, state, "ground", 101, 10) == nil)
+assert(ids(R.Filter(SIX, state)) == "1,2,3,4,5,6")
+
+-- Getting on it is what makes it count, and the ride runs from that moment.
+assert(R.CommitSummon(state, 103))
+assert(not R.SummonInFlight(state, 103))
+assert(R.StickyPick(SIX, state, "ground", 110, 10).id == 4)
+assert(R.StickyPick(SIX, state, "ground", 114, 10) == nil)
+
+-- A mount up long after the cast is a different mount the player got on some
+-- other way, so the summon left in the air is dropped rather than credited.
+state = newState()
+R.RecordSummon(state, 4, "ground", 100)
+assert(not R.SummonInFlight(state, 100 + R.SUMMON_GRACE + 1))
+assert(not R.CommitSummon(state, 100 + R.SUMMON_GRACE + 1))
+assert(state.last == nil)
+
+-- Nothing in the air is nothing to commit.
+assert(not R.CommitSummon(newState(), 100))
 
 -- ---------------------------------------------------------------------------
 -- Forget it after

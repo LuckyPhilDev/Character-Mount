@@ -20,7 +20,9 @@ CharacterMountDB = {}
 CharacterMount_MOUNT_TYPE = { NONE = "none", GROUND = "ground", FLYING = "flying", WATER = "water" }
 
 -- Player state the roll checks before it will summon anything.
-function IsMounted() return false end
+local mounted = false
+function IsMounted() return mounted end
+function Dismount() mounted = false end
 function IsFlying() return false end
 function InCombatLockdown() return false end
 function IsIndoors() return false end
@@ -96,27 +98,38 @@ db.onboardingComplete = true
 for _, id in ipairs(MOUNTS) do db.additions[id] = "manual" end
 assert(#CharacterMount.GetEffectiveMountList() == #MOUNTS)
 
---- Summon and return the mount ID that reached the journal.
-local function roll()
+local function mountDisplayChanged()
+    for _, frame in ipairs(frames) do
+        if frame.scripts.OnEvent then
+            frame.scripts.OnEvent(frame, "PLAYER_MOUNT_DISPLAY_CHANGED")
+        end
+    end
+end
+
+--- Click the macro at `t` and start the cast without landing on the mount,
+--- the way walking out of it leaves things. Returns the mount ID that
+--- reached the journal.
+local function summonAt(t)
+    now = t
     CharacterMount.__summoned = nil
     CharacterMount.MountRandom()
     assert(CharacterMount.__summoned, "nothing was summoned")
     return CharacterMount.__summoned
 end
 
+--- Summon at `t` and get on the mount, the way a cast left alone ends.
 local function rollAt(t)
-    now = t
-    return roll()
+    local id = summonAt(t)
+    mounted = true
+    mountDisplayChanged()
+    return id
 end
 
 --- Get off the mount at `t`, the way the game reports it.
 local function dismountAt(t)
     now = t
-    for _, frame in ipairs(frames) do
-        if frame.scripts.OnEvent then
-            frame.scripts.OnEvent(frame, "PLAYER_MOUNT_DISPLAY_CHANGED")
-        end
-    end
+    mounted = false
+    mountDisplayChanged()
 end
 
 -- ---------------------------------------------------------------------------
@@ -136,6 +149,7 @@ for i = 1, 40 do
             ("roll %d repeated the mount from roll %d"):format(i, i - back))
     end
     seen[i] = id
+    dismountAt(i * 100 + 50)
 end
 
 -- The check above has teeth: with the setting off, a repeat does turn up.
@@ -146,6 +160,7 @@ for i = 1, 40 do
     local id = rollAt(5000 + i * 100)
     if seen[i - 1] == id then repeated = true end
     seen[i] = id
+    dismountAt(5000 + i * 100 + 50)
 end
 assert(repeated, "expected an unvaried run to repeat a mount")
 
@@ -153,8 +168,10 @@ assert(repeated, "expected an unvaried run to repeat a mount")
 -- all, because the block yields as soon as it would empty the pool.
 for i = 2, #MOUNTS do db.exclusions[MOUNTS[i]] = true end
 CharacterMountDB.varyMounts = true
-assert(rollAt(1200) == MOUNTS[1])
-assert(rollAt(1300) == MOUNTS[1])
+assert(rollAt(9200) == MOUNTS[1])
+dismountAt(9250)
+assert(rollAt(9300) == MOUNTS[1])
+dismountAt(9350)
 
 for i = 2, #MOUNTS do db.exclusions[MOUNTS[i]] = nil end
 
@@ -169,6 +186,7 @@ CharacterMountDB.stayOnMountSeconds = 0
 local first = rollAt(2000)
 dismountAt(2001)
 assert(rollAt(2002) ~= first)
+dismountAt(2003)
 
 CharacterMountDB.stayOnMountSeconds = 10
 
@@ -185,23 +203,39 @@ assert(rollAt(3500) == first)
 dismountAt(3510)
 assert(rollAt(3511) ~= first)
 
--- A summon that never went off has no dismount to measure from, so a quick
--- second press gets the same mount and a late one rolls.
-first = rollAt(3600)
-assert(rollAt(3602) == first)
-assert(rollAt(3700) ~= first)
-
 -- A category change defeats it: the ground mount is not summoned underwater.
 -- Every mount in this journal is ground-only, so a water roll has no match and
 -- falls back to the full list, which is where a stuck sticky would show up.
+dismountAt(3512)
 first = rollAt(4000)
 dismountAt(4000.5)
 category = CharacterMount_MOUNT_TYPE.WATER
 local held = 0
 for i = 1, 20 do
     if rollAt(4000 + i) == first then held = held + 1 end
+    dismountAt(4000 + i + 0.5)
 end
 assert(held < 20, "the ground mount was held on to after moving to water")
+
+-- ---------------------------------------------------------------------------
+-- A summon has to land
+-- ---------------------------------------------------------------------------
+
+category = CharacterMount_MOUNT_TYPE.GROUND
+CharacterMountDB.varyMounts = false
+
+-- A long ride, so the mount that follows is rolled rather than repeated.
+rollAt(4500)
+dismountAt(4600)
+
+-- Tuulani's case: start a cast, walk out of it, and it is as if it never
+-- happened. Every click here rolls afresh instead of handing back the mount
+-- that never came up.
+local afterCancel = {}
+for i = 1, 20 do afterCancel[summonAt(4600 + i)] = true end
+local distinct = 0
+for _ in pairs(afterCancel) do distinct = distinct + 1 end
+assert(distinct > 1, "a cast that was walked out of was remembered anyway")
 
 -- ---------------------------------------------------------------------------
 -- Forget it after

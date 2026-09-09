@@ -536,8 +536,8 @@ end
 -- never cast, and filtering there would hand forms the share of every journal
 -- mount being held back. Track them properly if the pre-roll ever learns which
 -- macro was clicked.
-local function RecordRoll(entry, category)
-    CharacterMount.Recency.Record(
+local function RecordSummon(entry, category)
+    CharacterMount.Recency.RecordSummon(
         rollState, entry.id, category, GetTime(), EntryHolidayLive(entry))
 end
 
@@ -920,7 +920,7 @@ function CharacterMount.MountRandom(forcedCategory)
             pick = RollFrom(pool)
             devLog("Picked from pool of " .. #pool .. ": " .. pick.name)
         end
-        RecordRoll(pick, category)
+        RecordSummon(pick, category)
         C_MountJournal.SummonByID(pick.id)
         return
     end
@@ -928,7 +928,7 @@ function CharacterMount.MountRandom(forcedCategory)
     if #usable > 0 then
         local pick = StickyPick(usable, category) or RollFrom(usable)
         devLog("Picked (no category filter): " .. pick.name)
-        RecordRoll(pick, category)
+        RecordSummon(pick, category)
         C_MountJournal.SummonByID(pick.id)
         return
     end
@@ -1108,6 +1108,9 @@ end
 --- eligible category; the ground macro forces GROUND.
 function CharacterMount.PreRoll()
     if InCombatLockdown() then return end
+    -- A summon in the air is not in the memory yet, so rolling now would decide
+    -- the next click from the mount before it. Landing rolls again.
+    if CharacterMount.Recency.SummonInFlight(rollState, GetTime()) then return end
 
     local eligible = CharacterMount_GetEligibleMountCategory()
 
@@ -1620,9 +1623,14 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         CharacterMount.UpdateMacro()
         if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     elseif event == "PLAYER_MOUNT_DISPLAY_CHANGED" then
-        -- Fires for every way off a mount: the macro, jumping off, a taxi, zoning.
+        -- Fires for every way on and off a mount: the macro, jumping off, a
+        -- taxi, zoning. Being on one is what makes a summon count, so this is
+        -- also where a cast that landed reaches the roll memory.
         if not IsMounted() then
             CharacterMount.Recency.RecordDismount(rollState, GetTime())
+        elseif CharacterMount.Recency.CommitSummon(rollState, GetTime()) then
+            devLog("[ROLL MEMORY] Summon landed, remembering it.")
+            CharacterMount.PreRoll()
         end
     end
 end)
