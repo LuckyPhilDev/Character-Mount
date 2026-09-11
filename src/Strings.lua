@@ -208,7 +208,7 @@ CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
         matchLine         = "  [%d] %s",
         testPopup         = "Testing new-mount popup with mount ID %s.",
         noSampleMount     = "No sample mount available. Usage: /cmount testpopup <id>",
-        needMountID       = "Please provide a valid mount ID. Usage: /cmount testunlock <id>",
+        needMountID       = "Please provide a valid mount ID. Usage: /cmount testunlock <id> [id ...]",
         usageTitle        = "Usage:",
         usage = {
             "  /cmount              open or close the UI",

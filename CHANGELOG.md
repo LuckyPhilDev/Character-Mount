@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Fixed
+- Learning several mounts back to back now shows the New Mount Unlocked popup for each one in turn, not only the last. (Thanks for the report Tuulani)
+
 ## [1.13.1] - 2026-09-09
 
 ### Improved

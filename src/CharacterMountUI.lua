@@ -882,15 +882,37 @@ local function RefreshMountPreview(dialog, mountID)
     preview:SetShown(LoadMountModel(dialog.previewModel, mountID))
 end
 
+-- Mounts learned while the dialog is already up, shown one after another.
+local pendingNewMounts = {}
+
 function CharacterMount.ShowNewMountDialog(mountID)
     local name, _, icon = C_MountJournal.GetMountInfoByID(mountID)
     if not name then return end
 
-    if not CharacterMount.newMountDialog then
+    local existing = CharacterMount.newMountDialog
+    if existing and existing:IsShown() then
+        if existing.mountID ~= mountID and not tContains(pendingNewMounts, mountID) then
+            table.insert(pendingNewMounts, mountID)
+        end
+        return
+    end
+
+    if not existing then
         local frame = LuckyUI.CreatePanel("CharacterMount_NewMountDialog", UIParent, 340, 180)
         frame:SetPoint("CENTER", 0, 150)
         frame:SetFrameStrata("DIALOG")
         LuckyUI.CreateHeader(frame, S.newMount.title)
+
+        -- Every way out (a button, the header's close button) ends here. Hiding
+        -- UIParent also fires OnHide without clearing IsShown, so skip that.
+        -- Deferred a frame so the next mount is not shown mid-hide.
+        frame:SetScript("OnHide", function(self)
+            if self:IsShown() then return end
+            local nextID = table.remove(pendingNewMounts, 1)
+            if nextID then
+                C_Timer.After(0, function() CharacterMount.ShowNewMountDialog(nextID) end)
+            end
+        end)
         
         local iconTex = frame:CreateTexture(nil, "ARTWORK")
         iconTex:SetSize(40, 40)
@@ -959,6 +981,7 @@ function CharacterMount.ShowNewMountDialog(mountID)
     end
     
     local dialog = CharacterMount.newMountDialog
+    dialog.mountID = mountID
     dialog.iconTex:SetTexture(icon)
     dialog.label:SetText(name)
     

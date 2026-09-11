@@ -1415,14 +1415,14 @@ SlashCmdList["CHARACTERMOUNT"] = function(msg)
             print(PREFIX .. " " .. S.slash.noSampleMount)
         end
     elseif lower:sub(1, 11) == "testunlock " then
-        local arg = msg:sub(12):match("^%s*(.-)%s*$")
-        local mountID = tonumber(arg)
-        if mountID then
-            if CharacterMount.ShowNewMountDialog then
-                CharacterMount.ShowNewMountDialog(mountID)
-            end
-        else
+        -- Several IDs fire back to back, like learning mounts in quick succession.
+        local mountIDs = {}
+        for id in msg:sub(12):gmatch("%d+") do mountIDs[#mountIDs + 1] = tonumber(id) end
+        if #mountIDs == 0 then
             print(PREFIX .. " " .. S.slash.needMountID)
+        end
+        for _, mountID in ipairs(mountIDs) do
+            CharacterMount.ShowNewMountDialog(mountID)
         end
     elseif lower == "sources" or lower:sub(1, 8) == "sources " then
         -- Dev probe: does the journal expose a usable "In-Game Shop" source flag?
