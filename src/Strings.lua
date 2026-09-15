@@ -109,6 +109,9 @@ CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
         currentChar = "Current Char",
         noThanks    = "No Thanks",
         allChars    = "All Chars",
+        otherChar   = "Other Char",
+        noOtherChars = "No other characters yet",
+        addToSelected = "Add to Selected",
     },
 
     onboarding = {
@@ -188,6 +191,7 @@ CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
         invalidID      = "Invalid mount ID: %s",
         added          = "Added %s to your list.",
         addedAllChars  = "Added %s to all character lists.",
+        addedOtherChars = "Added %s to the lists for %s.",
         removed        = "Removed %s from your list.",
     },
 
@@ -208,7 +212,7 @@ CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
         matchLine         = "  [%d] %s",
         testPopup         = "Testing new-mount popup with mount ID %s.",
         noSampleMount     = "No sample mount available. Usage: /cmount testpopup <id>",
-        needMountID       = "Please provide a valid mount ID. Usage: /cmount testunlock <id>",
+        needMountID       = "Please provide a valid mount ID. Usage: /cmount testunlock <id> [id ...]",
         usageTitle        = "Usage:",
         usage = {
             "  /cmount              open or close the UI",
