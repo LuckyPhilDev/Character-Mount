@@ -898,7 +898,7 @@ function CharacterMount.ShowNewMountDialog(mountID)
     end
 
     if not existing then
-        local frame = LuckyUI.CreatePanel("CharacterMount_NewMountDialog", UIParent, 340, 180)
+        local frame = LuckyUI.CreatePanel("CharacterMount_NewMountDialog", UIParent, 440, 180)
         frame:SetPoint("CENTER", 0, 150)
         frame:SetFrameStrata("DIALOG")
         LuckyUI.CreateHeader(frame, S.newMount.title)
@@ -942,16 +942,20 @@ function CharacterMount.ShowNewMountDialog(mountID)
         hintLabel:SetText(S.newMount.disableHint)
         
         local btnCurrent = LuckyUI.CreateButton(frame, S.newMount.currentChar, 100, 26, "primary")
-        btnCurrent:SetPoint("BOTTOM", frame, "BOTTOM", 0, 40)
+        btnCurrent:SetPoint("BOTTOMRIGHT", frame, "BOTTOM", -4, 40)
         frame.btnCurrent = btnCurrent
-        
+
         local btnClose = LuckyUI.CreateButton(frame, S.newMount.noThanks, 90, 26, "secondary")
         btnClose:SetPoint("RIGHT", btnCurrent, "LEFT", -8, 0)
         frame.btnClose = btnClose
-        
+
         local btnAll = LuckyUI.CreateButton(frame, S.newMount.allChars, 100, 26, "primary")
-        btnAll:SetPoint("LEFT", btnCurrent, "RIGHT", 8, 0)
+        btnAll:SetPoint("BOTTOMLEFT", frame, "BOTTOM", 4, 40)
         frame.btnAll = btnAll
+
+        local btnOther = LuckyUI.CreateButton(frame, S.newMount.otherChar, 100, 26, "primary")
+        btnOther:SetPoint("LEFT", btnAll, "RIGHT", 8, 0)
+        frame.btnOther = btnOther
 
         -- 3D model preview panel, anchored to the right of the dialog.
         local preview = LuckyUI.CreatePanel("CharacterMount_NewMountPreview", frame, 220, 220)
@@ -995,6 +999,36 @@ function CharacterMount.ShowNewMountDialog(mountID)
         dialog:Hide()
     end)
     
+    -- Ticks survive closing and reopening the menu, until the next mount.
+    local picked = {}
+    dialog.btnOther:SetScript("OnClick", function(self)
+        MenuUtil.CreateContextMenu(self, function(_, root)
+            local others = CharacterMount.GetOtherCharacters()
+            if #others == 0 then
+                root:CreateTitle(S.newMount.noOtherChars)
+                return
+            end
+            for _, key in ipairs(others) do
+                root:CreateCheckbox(CharacterMount.FormatCharacter(key),
+                    function() return picked[key] end,
+                    function()
+                        picked[key] = not picked[key] or nil
+                        return MenuResponse.Refresh
+                    end)
+            end
+            root:CreateDivider()
+            local add = root:CreateButton(S.newMount.addToSelected, function()
+                local keys = {}
+                for _, key in ipairs(others) do
+                    if picked[key] then keys[#keys + 1] = key end
+                end
+                CharacterMount.AddMountToCharacters(mountID, keys)
+                dialog:Hide()
+            end)
+            add:SetEnabled(function() return next(picked) ~= nil end)
+        end)
+    end)
+
     dialog.btnClose:SetScript("OnClick", function()
         dialog:Hide()
     end)

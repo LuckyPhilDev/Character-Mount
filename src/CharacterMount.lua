@@ -700,21 +700,64 @@ function CharacterMount.AddMount(mountID)
     return true
 end
 
+-- Account-wide settings share CharacterMountDB with the per-character lists.
+local function IsCharacterData(data)
+    return type(data) == "table" and data.additions and data.exclusions
+end
+
+local function AddToCharacterData(data, mountID)
+    data.exclusions[mountID] = nil
+    data.additions[mountID] = "manual"
+    if data.specExclusions then data.specExclusions[mountID] = nil end
+    if data.mountTypes then data.mountTypes[mountID] = nil end
+end
+
 function CharacterMount.AddMountToAllCharacters(mountID)
     local name = C_MountJournal.GetMountInfoByID(mountID)
     if not name then return false end
-    
+
     for _, data in pairs(CharacterMountDB) do
-        if type(data) == "table" and data.additions and data.exclusions then
-            data.exclusions[mountID] = nil
-            data.additions[mountID] = "manual"
-            if data.specExclusions then data.specExclusions[mountID] = nil end
-            if data.mountTypes then data.mountTypes[mountID] = nil end
-        end
+        if IsCharacterData(data) then AddToCharacterData(data, mountID) end
     end
     print(PREFIX .. " " .. S.mounts.addedAllChars:format(name))
     if CharacterMount.RefreshUI then CharacterMount.RefreshUI() end
     CharacterMount.PreRoll()
+    return true
+end
+
+--- Sorted keys of every character with a list, except the one logged in.
+function CharacterMount.GetOtherCharacters()
+    local keys = {}
+    for key, data in pairs(CharacterMountDB) do
+        if key ~= charKey and IsCharacterData(data) then keys[#keys + 1] = key end
+    end
+    table.sort(keys)
+    return keys
+end
+
+--- Class-coloured character name, with the realm only when it is not yours.
+function CharacterMount.FormatCharacter(key)
+    local name, realm = key:match("^(.-)%-(.*)$")
+    if not name then return key end
+    -- Our keys use GetRealmName ("Area 52"); the roster's use the normalized
+    -- realm ("Area52"), as UnitFullName returns it.
+    local class = LuckyRoster:GetClass(name .. "-" .. realm:gsub("[%s%-]", ""))
+    local colour = class and RAID_CLASS_COLORS[class]
+    local label = realm == GetRealmName() and name or key
+    return colour and colour:WrapTextInColorCode(label) or label
+end
+
+--- Add `mountID` to each character key in `keys`, in one chat line.
+function CharacterMount.AddMountToCharacters(mountID, keys)
+    local name = C_MountJournal.GetMountInfoByID(mountID)
+    if not name or #keys == 0 then return false end
+
+    local labels = {}
+    for i, key in ipairs(keys) do
+        AddToCharacterData(CharacterMountDB[key], mountID)
+        labels[i] = CharacterMount.FormatCharacter(key)
+    end
+    print(PREFIX .. " " .. S.mounts.addedOtherChars:format(name, table.concat(labels, ", ")))
     return true
 end
 
