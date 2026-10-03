@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Added
+- **Ground mount key** Choose whether Alt, Ctrl, Shift or no key forces a ground mount when you press the mount macro, in the Macros settings.
+
 ## [1.14.0] - 2026-09-15
 
 ### Added

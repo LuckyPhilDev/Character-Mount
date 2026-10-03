@@ -242,6 +242,21 @@ function CharacterMount.InitSettings()
         end,
     })
 
+    macros:Select({
+        label    = S.settings.groundModifier,
+        desc     = S.settings.groundModifierDesc,
+        since    = "1.15.0",
+        width    = 120,
+        options  = {
+            { key = "ALT",   label = S.settings.groundModifierAlt },
+            { key = "CTRL",  label = S.settings.groundModifierCtrl },
+            { key = "SHIFT", label = S.settings.groundModifierShift },
+            { key = "NONE",  label = S.settings.groundModifierNone },
+        },
+        value    = function() return CharacterMountDB.groundModifier or "ALT" end,
+        onSelect = function(key) CharacterMountDB.groundModifier = key end,
+    })
+
     macros:Toggle({
         label    = S.settings.quietWarnings,
         desc     = S.settings.quietWarningsDesc,
