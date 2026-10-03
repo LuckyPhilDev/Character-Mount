@@ -1043,8 +1043,10 @@ local GROUND_MACRO_ICON = "ability_mount_whitetiger"
 -- where the player is standing" (the normal macro); GROUND forces ground mounts
 -- regardless of whether flying is allowed.
 local MACRO_SPECS = {
-    { name = MACRO_NAME,        icon = MACRO_ICON,        mountCmd = "mount",       category = nil },
-    { name = GROUND_MACRO_NAME, icon = GROUND_MACRO_ICON, mountCmd = "groundmount", category = CharacterMount_MOUNT_TYPE.GROUND },
+    { name = MACRO_NAME,        icon = MACRO_ICON,        mountCmd = "mount",       category = nil,
+      button = "CharacterMountButton" },
+    { name = GROUND_MACRO_NAME, icon = GROUND_MACRO_ICON, mountCmd = "groundmount", category = CharacterMount_MOUNT_TYPE.GROUND,
+      button = "CharacterMountGroundButton" },
 }
 
 --- Build macro body for a given pre-rolled result.
@@ -1062,6 +1064,17 @@ function CharacterMount.BuildMacroBody(spellName, mountCmd)
     -- blocked except in encounters where Blizzard allows mounting; MountRandom
     -- checks the zone and summons there too.
     return "/cmount " .. (mountCmd or "mount") .. "\n/cmount roll"
+end
+
+-- The key bindings in Bindings.xml click these, so a binding works without a macro slot.
+local bindingButtons = {}
+for _, spec in ipairs(MACRO_SPECS) do
+    local button = CreateFrame("Button", spec.button, UIParent, "SecureActionButtonTemplate")
+    -- A binding click arrives as a down press with ActionButtonUseKeyDown on, an up press with it off.
+    button:RegisterForClicks(C_CVar.GetCVarBool("ActionButtonUseKeyDown") and "AnyDown" or "AnyUp")
+    button:SetAttribute("type", "macro")
+    button:SetAttribute("macrotext", CharacterMount.BuildMacroBody(nil, spec.mountCmd))
+    bindingButtons[spec.name] = button
 end
 
 --- Build the usable/preferred pools for a given category (shared by PreRoll).
@@ -1146,9 +1159,9 @@ local function WriteMacroBody(idx, body)
     EditMacro(idx, nil, nil, CharacterMount.MergeMacroBody(GetMacroBody(idx) or "", body))
 end
 
---- Pre-roll every existing CharMount macro: pick each one's next mount/form and
---- rewrite it so the next click executes it. The normal macro rolls against the
---- eligible category; the ground macro forces GROUND.
+--- Pre-roll every CharMount macro and key binding: pick each one's next
+--- mount/form and rewrite it so the next press executes it. The normal one rolls
+--- against the eligible category; the ground one forces GROUND.
 function CharacterMount.PreRoll()
     if InCombatLockdown() then return end
     -- A summon in the air is not in the memory yet, so rolling now would decide
@@ -1158,27 +1171,26 @@ function CharacterMount.PreRoll()
     local eligible = CharacterMount_GetEligibleMountCategory()
 
     for _, spec in ipairs(MACRO_SPECS) do
-        local idx = GetMacroIndexByName(spec.name)
-        if idx and idx > 0 then
-            local category = spec.category or eligible
-            local pool = BuildRollPool(category)
-            if #pool == 0 then
-                devLog("[ROLL] " .. spec.name .. ": no usable mounts for next click.")
+        local category = spec.category or eligible
+        local pool = BuildRollPool(category)
+        if #pool == 0 then
+            devLog("[ROLL] " .. spec.name .. ": no usable mounts for next click.")
+        else
+            -- Sticky only. The journal mount PreRoll lands on is thrown
+            -- away, MountRandom rolls it live, so filtering here would
+            -- only skew the choice between a mount and a spell form.
+            local pick = StickyPick(pool, category) or WeightedPick(pool)
+            local body
+            if pick.spellID then
+                devLog("[ROLL] " .. spec.name .. " next click → spell: " .. pick.name)
+                body = CharacterMount.BuildMacroBody(pick.name, spec.mountCmd)
             else
-                -- Sticky only. The journal mount PreRoll lands on is thrown
-                -- away, MountRandom rolls it live, so filtering here would
-                -- only skew the choice between a mount and a spell form.
-                local pick = StickyPick(pool, category) or WeightedPick(pool)
-                local body
-                if pick.spellID then
-                    devLog("[ROLL] " .. spec.name .. " next click → spell: " .. pick.name)
-                    body = CharacterMount.BuildMacroBody(pick.name, spec.mountCmd)
-                else
-                    devLog("[ROLL] " .. spec.name .. " next click → mount: " .. pick.name)
-                    body = CharacterMount.BuildMacroBody(nil, spec.mountCmd)
-                end
-                WriteMacroBody(idx, body)
+                devLog("[ROLL] " .. spec.name .. " next click → mount: " .. pick.name)
+                body = CharacterMount.BuildMacroBody(nil, spec.mountCmd)
             end
+            local idx = GetMacroIndexByName(spec.name)
+            if idx and idx > 0 then WriteMacroBody(idx, body) end
+            bindingButtons[spec.name]:SetAttribute("macrotext", body)
         end
     end
 end

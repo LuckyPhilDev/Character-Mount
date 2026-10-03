@@ -10,6 +10,11 @@
 
 CharacterMount = CharacterMount or {}
 
+-- luacheck: globals BINDING_HEADER_CHARACTERMOUNT
+BINDING_HEADER_CHARACTERMOUNT = "Lucky's Character Mount"
+_G["BINDING_NAME_CLICK CharacterMountButton:LeftButton"] = "Summon mount"
+_G["BINDING_NAME_CLICK CharacterMountGroundButton:LeftButton"] = "Summon ground mount"
+
 CharacterMount.Strings = LuckyStrings.New("CharacterMount.Strings", {
     addon = {
         title  = "Lucky's Character Mount",

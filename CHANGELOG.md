@@ -2,6 +2,7 @@
 
 ### Added
 - **Ground mount key** Choose whether Alt, Ctrl, Shift or no key forces a ground mount when you press the mount macro, in the Macros settings.
+- **Key bindings** Summon mount and Summon ground mount appear under Lucky's Character Mount in the game's Key Bindings, so you can mount from a key without placing a macro.
 
 ## [1.14.0] - 2026-09-15
 
