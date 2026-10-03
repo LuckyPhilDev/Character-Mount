@@ -1,0 +1,4 @@
+<Bindings>
+	<Binding name="CLICK CharacterMountButton:LeftButton" category="BINDING_HEADER_CHARACTERMOUNT"/>
+	<Binding name="CLICK CharacterMountGroundButton:LeftButton" category="BINDING_HEADER_CHARACTERMOUNT"/>
+</Bindings>

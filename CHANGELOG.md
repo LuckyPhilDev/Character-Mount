@@ -1,3 +1,8 @@
+## [Unreleased]
+
+### Added
+- **Key bindings** Summon mount and Summon ground mount appear under Lucky's Character Mount in the game's Key Bindings, so you can mount from a key without placing a macro.
+
 ## [1.14.0] - 2026-09-15
 
 ### Added
