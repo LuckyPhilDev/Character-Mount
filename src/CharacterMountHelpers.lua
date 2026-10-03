@@ -47,11 +47,15 @@ local function IsInVashjir()
         or zone == "Kelp'thar Forest"
 end
 
--- Helper function to check if player should use ground mount (based on modifier keys)
--- This can be customized per character later
+local GROUND_MODIFIER_HELD = {
+    ALT   = IsAltKeyDown,
+    CTRL  = IsControlKeyDown,
+    SHIFT = IsShiftKeyDown,
+}
+
 local function ShouldUseGroundMount()
-    -- Default: Alt key forces ground mount
-    return IsAltKeyDown()
+    local isHeld = GROUND_MODIFIER_HELD[CharacterMountDB.groundModifier or "ALT"]
+    return isHeld ~= nil and isHeld()
 end
 
 local function GetPlayerClass()
@@ -186,11 +190,7 @@ function CharacterMount_GetEligibleMountCategory()
     
     -- Level 10-19: Can use flying mounts but may not have pathfinder
     if playerLevel >= 10 and playerLevel < 20 then
-        if IsModifierKeyDown() then
-            return MOUNT_TYPE.GROUND
-        else
-            return MOUNT_TYPE.FLYING
-        end
+        return MOUNT_TYPE.FLYING
     end
     
     -- Check if area allows flying
