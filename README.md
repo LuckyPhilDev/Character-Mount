@@ -13,6 +13,8 @@
 - **Spell form support**: Druid Travel Form, Dracthyr Soar, and Worgen Running Wild are treated as mounts and randomised alongside journal mounts.
 - **Random summoning**: click the macro to summon a random mount from your list, automatically filtered by context (ground, flying, or water). Give the macro your own icon, name, or extra lines and they stay put, as the addon only rewrites its own lines between summons.
 - **Ground-only macro**: a "Get Ground Macro" button in settings puts a second macro on your cursor that always summons a ground mount, even in zones where you could fly. Drop it on an action bar for when you want to stay on the ground.
+- **Ground mount key**: choose whether Alt, Ctrl, Shift or no key forces a ground mount when you press the mount macro, in the Macros settings.
+- **Key bindings**: Summon mount and Summon ground mount appear under Lucky's Character Mount in the game's Key Bindings, so you can mount from a key without placing a macro.
 - **Combat mounting**: the macro also works mid-combat in the rare encounters where the game allows it, such as Tindral Sageswift, Dimensius, and The Dawnbreaker.
 - **Mount Journal integration**: Add and remove mounts from the list from the mount journal, with a button on the selected mount or a middle-click on any mount in the list.
 - **Search the list**: a search box at the top of the mount list filters your mounts by name as you type, with the header showing how many match.

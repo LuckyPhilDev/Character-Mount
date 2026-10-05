@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.15.0] - 2026-10-05
 
 ### Added
 - **Ground mount key** Choose whether Alt, Ctrl, Shift or no key forces a ground mount when you press the mount macro, in the Macros settings.
@@ -6,6 +6,7 @@
 
 ### Fixed
 - A mount restored from the Excluded list keeps its Racial, Class or other source label instead of coming back as Manual.
+- Fixed an error with the settings panel.
 
 ## [1.14.0] - 2026-09-15
 
