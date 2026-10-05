@@ -41,6 +41,7 @@ function GetMacroIndexByName() return 0 end
 C_Timer  = { After = noop }
 C_Spell  = { GetSpellInfo = function() return nil end }
 C_AddOns = { IsAddOnLoaded = function() return false end }
+C_CVar   = { GetCVarBool = function() return false end }
 C_Map    = { GetBestMapForUnit = function() return nil end, GetMapInfo = function() return nil end }
 C_Calendar = setmetatable({}, { __index = function() return noop end })
 

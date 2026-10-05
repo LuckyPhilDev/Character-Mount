@@ -26,6 +26,8 @@ C_Spell = {
     end,
 }
 
+C_CVar = { GetCVarBool = function() return false end }
+
 dofile("src/Strings.lua")
 dofile("src/CharacterMount.lua")
 
