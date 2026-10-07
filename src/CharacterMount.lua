@@ -1309,7 +1309,7 @@ end
 -- Minimap button
 -- ---------------------------------------------------------------------------
 
-local MINIMAP_ICON = LuckyMedia("promo-character-mount.tga")
+local MINIMAP_ICON = "Interface\\AddOns\\Luckys_Character_Mount\\media\\icon"
 
 function CharacterMount.InitMinimapButton()
     if not LuckyMinimap then return end
